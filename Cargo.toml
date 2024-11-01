@@ -1,0 +1,12 @@
+[package]
+name = "tokiobench"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { git = "https://github.com/IgorErin/tokio.git", features = ["full"] }
+criterion = "0.5.1"
+
+[[bench]]
+name = "spawn"
+harness = false
