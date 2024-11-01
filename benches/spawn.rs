@@ -2,22 +2,21 @@ use tokio::runtime::{self, Runtime};
 
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
+use std::sync::mpsc::SyncSender;
 use std::sync::{mpsc, Arc};
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use itertools::iproduct;
+
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
 // const STALL_DUR: Duration = Duration::from_micros(10); TODO(add stall)
 
 const NWORKERS: [usize; 7] = [1, 2, 4, 6, 8, 10, 12];
+const NSPAWN: [usize; 6] = [10, 100, 1000, 10000, 10000, 100000];
 
-// TODO(we must sheck spawning in bound of local queue and above to ensure contantion overhead)
-// const NTASKS: [usize; 6] = [10, 100, 1000, 10000, 10000, 100000]; TODO(change number of tasks)
-// const NITER: [usize; 6] = [1, 5, 10, 15, 20, 25]; TODO(change number of iter)
-
-// fix for now
-const NITER: usize = 10;
-const NSPAWN: usize = 100000;
-const NALL: usize = NITER * NSPAWN;
+fn data() -> impl Iterator<Item = (usize, usize)> {
+    iproduct!(NWORKERS, NSPAWN)
+}
 
 fn rt(workers: usize) -> Runtime {
     runtime::Builder::new_multi_thread()
@@ -27,42 +26,66 @@ fn rt(workers: usize) -> Runtime {
         .unwrap()
 }
 
+type BenchFn = fn(usize, SyncSender<()>, Arc<AtomicUsize>) -> ();
+
 // from tokio
-fn rt_multi_spawn_many_from_current(c: &mut Criterion) {
+// spawn from current thread to inject queue
+#[inline]
+fn spawn_many_from_current(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>) {
+    for _ in 0..nspawn {
+        let tx = tx.clone();
+        let rem = rem.clone();
+
+        tokio::spawn(async move {
+            if 1 == rem.fetch_sub(1, Relaxed) {
+                tx.send(()).unwrap();
+            }
+        });
+    }
+}
+
+// spawn from worker (proofe needed) to his local queue
+// tasks must oveflow at some numbers
+// and we should see this in graphs
+#[inline]
+fn spawn_many_to_local(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>) {
+    tokio::spawn(async move {
+        for _ in 0..nspawn {
+            let rem = rem.clone();
+            let tx = tx.clone();
+
+            tokio::spawn(async move {
+                if 1 == rem.fetch_sub(1, Relaxed) {
+                    tx.send(()).unwrap();
+                }
+            });
+        }
+    });
+}
+
+#[inline]
+fn bench_count_down(bench_fn: BenchFn, c: &mut Criterion) {
     let (tx, rx) = mpsc::sync_channel(1000);
-    let rem = Arc::new(AtomicUsize::new(0));
+    let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
 
     let mut group = c.benchmark_group("spawn_many_from_current");
 
-    for workers in NWORKERS.iter() {
-        group.throughput(Throughput::Elements(*workers as u64));
+    for (nspawn, nworkers) in data() {
+        group.throughput(Throughput::Elements(nspawn as u64));
         group.bench_with_input(
-            BenchmarkId::from_parameter(workers),
-            workers,
-            |b, &workers| {
-                let rt = rt(workers);
+            format!("ns = {}/{} = nw", nworkers, nspawn),
+            &(nspawn, nworkers),
+            |b, &(nworkers, nspawn)| {
+                let rt = rt(nworkers);
 
-                // TODO(decouple function to dump metrics)
                 b.iter(|| {
                     let tx = tx.clone();
                     let rem = rem.clone();
 
-                    rem.store(NALL, Relaxed);
-
+                    rem.store(nspawn, Relaxed);
+                    // collect metrics here TODO()
                     rt.block_on(async {
-                        for _ in 0..NITER {
-                            // TODO() cpu bound task here?
-                            for _ in 0..NSPAWN {
-                                let tx = tx.clone();
-                                let rem = rem.clone();
-
-                                tokio::spawn(async move {
-                                    if 1 == rem.fetch_sub(1, Relaxed) {
-                                        tx.send(()).unwrap();
-                                    }
-                                });
-                            }
-                        }
+                        bench_fn(nspawn, tx, rem);
 
                         rx.recv().unwrap();
                     });
@@ -72,50 +95,12 @@ fn rt_multi_spawn_many_from_current(c: &mut Criterion) {
     }
 }
 
-pub fn rt_multi_spawn_many_to_local(c: &mut Criterion) {
-    let (tx, rx) = mpsc::sync_channel(1000);
-    let rem = Arc::new(AtomicUsize::new(0));
+fn rt_multi_spawn_many_from_current(c: &mut Criterion) {
+    bench_count_down(spawn_many_from_current, c)
+}
 
-    let mut group = c.benchmark_group("spawn_many_to_local");
-
-    for workers in NWORKERS.iter() {
-        group.throughput(Throughput::Elements(*workers as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(workers),
-            workers,
-            |b, &workers| {
-                let rt = rt(workers);
-
-                // TODO(decouple function to dump metrics)
-                b.iter(|| {
-                    let tx = tx.clone();
-                    let rem = rem.clone();
-
-                    rem.store(NALL, Relaxed);
-
-                    rt.block_on(async {
-                        tokio::spawn(async move {
-                            for _ in 0..NITER {
-                                // TODO() cpu bound task here?
-                                for _ in 0..NSPAWN {
-                                    let rem = rem.clone();
-                                    let tx = tx.clone();
-
-                                    tokio::spawn(async move {
-                                        if 1 == rem.fetch_sub(1, Relaxed) {
-                                            tx.send(()).unwrap();
-                                        }
-                                    });
-                                }
-                            }
-                        });
-
-                        rx.recv().unwrap();
-                    });
-                });
-            },
-        );
-    }
+fn rt_multi_spawn_many_to_local(c: &mut Criterion) {
+    bench_count_down(spawn_many_to_local, c);
 }
 
 criterion_group!(
