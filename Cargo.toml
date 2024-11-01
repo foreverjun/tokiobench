@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 tokio = { git = "https://github.com/IgorErin/tokio.git", features = ["full"] }
 criterion = "0.5.1"
+itertools = "0.13.0"
 
 [[bench]]
 name = "spawn"
