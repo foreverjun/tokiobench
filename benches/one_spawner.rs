@@ -12,7 +12,7 @@ use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 // const STALL_DUR: Duration = Duration::from_micros(10); TODO(add stall)
 
 const NWORKERS: [usize; 7] = [1, 2, 4, 6, 8, 10, 12];
-const NSPAWN: [usize; 6] = [10, 100, 1000, 10000, 10000, 100000];
+const NSPAWN: [usize; 6] = [100, 1000, 10000, 100000, 1000000, 10000000];
 
 fn data() -> impl Iterator<Item = (usize, usize)> {
     iproduct!(NWORKERS, NSPAWN)
@@ -64,11 +64,11 @@ fn spawn_many_to_local(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>)
 }
 
 #[inline]
-fn bench_count_down(bench_fn: BenchFn, c: &mut Criterion) {
+fn bench_count_down(bench_fn: BenchFn, name: &str, c: &mut Criterion) {
     let (tx, rx) = mpsc::sync_channel(1000);
     let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
 
-    let mut group = c.benchmark_group("spawn_many_from_current");
+    let mut group = c.benchmark_group(name);
 
     for (nspawn, nworkers) in data() {
         group.throughput(Throughput::Elements(nspawn as u64));
@@ -96,11 +96,11 @@ fn bench_count_down(bench_fn: BenchFn, c: &mut Criterion) {
 }
 
 fn rt_multi_spawn_many_from_current(c: &mut Criterion) {
-    bench_count_down(spawn_many_from_current, c)
+    bench_count_down(spawn_many_from_current, "spawn_current", c)
 }
 
 fn rt_multi_spawn_many_to_local(c: &mut Criterion) {
-    bench_count_down(spawn_many_to_local, c);
+    bench_count_down(spawn_many_to_local, "spawn_local", c);
 }
 
 criterion_group!(
