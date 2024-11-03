@@ -9,10 +9,13 @@ criterion = "0.5.1"
 itertools = "0.13.0"
 
 [[bench]]
-name = "one_spawner"
+name = "spawner"
 harness = false
 
 [[bench]]
 name = "workload"
 harness = false
 
+[[bench]]
+name = "remote"
+harness = false

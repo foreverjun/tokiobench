@@ -1,5 +1,3 @@
-use tokio::runtime::{self, Runtime};
-
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::mpsc::SyncSender;
@@ -9,22 +7,10 @@ use itertools::iproduct;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
-// const STALL_DUR: Duration = Duration::from_micros(10); TODO(add stall)
+use tokiobench::rt;
 
 const NWORKERS: [usize; 7] = [1, 2, 4, 6, 8, 10, 12];
 const NSPAWN: [usize; 6] = [100, 1000, 10000, 100000, 1000000, 10000000];
-
-fn data() -> impl Iterator<Item = (usize, usize)> {
-    iproduct!(NWORKERS, NSPAWN)
-}
-
-fn rt(workers: usize) -> Runtime {
-    runtime::Builder::new_multi_thread()
-        .worker_threads(workers)
-        .enable_all()
-        .build()
-        .unwrap()
-}
 
 type BenchFn = fn(usize, SyncSender<()>, Arc<AtomicUsize>) -> ();
 
@@ -48,7 +34,7 @@ fn spawn_many_from_current(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsi
 // tasks must oveflow at some numbers
 // and we should see this in graphs
 #[inline]
-fn spawn_many_to_local(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>) {
+fn spawn_many_from_local(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>) {
     tokio::spawn(async move {
         for _ in 0..nspawn {
             let rem = rem.clone();
@@ -70,13 +56,13 @@ fn bench_count_down(bench_fn: BenchFn, name: &str, c: &mut Criterion) {
 
     let mut group = c.benchmark_group(name);
 
-    for (nspawn, nworkers) in data() {
+    for (nspawn, nworkers) in iproduct!(NSPAWN, NWORKERS) {
         group.throughput(Throughput::Elements(nspawn as u64));
         group.bench_with_input(
-            format!("ns = {}/{} = nw", nworkers, nspawn),
+            format!("nspawn({nspawn})/nwork({nworkers})"),
             &(nspawn, nworkers),
-            |b, &(nworkers, nspawn)| {
-                let rt = rt(nworkers);
+            |b, &(nspawn, nworkers)| {
+                let rt = rt::new(nworkers);
 
                 b.iter(|| {
                     let tx = tx.clone();
@@ -95,18 +81,18 @@ fn bench_count_down(bench_fn: BenchFn, name: &str, c: &mut Criterion) {
     }
 }
 
-fn rt_multi_spawn_many_from_current(c: &mut Criterion) {
+fn spawn_many_from_current_bench(c: &mut Criterion) {
     bench_count_down(spawn_many_from_current, "spawn_current", c)
 }
 
-fn rt_multi_spawn_many_to_local(c: &mut Criterion) {
-    bench_count_down(spawn_many_to_local, "spawn_local", c);
+fn spawn_many_from_local_bench(c: &mut Criterion) {
+    bench_count_down(spawn_many_from_local, "spawn_local", c);
 }
 
 criterion_group!(
     spawn_benches,
-    rt_multi_spawn_many_from_current,
-    rt_multi_spawn_many_to_local
+    spawn_many_from_current_bench,
+    spawn_many_from_local_bench
 );
 
 criterion_main!(spawn_benches);
