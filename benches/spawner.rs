@@ -7,10 +7,8 @@ use itertools::iproduct;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
+use tokiobench::params;
 use tokiobench::rt;
-
-const NWORKERS: [usize; 7] = [1, 2, 4, 6, 8, 10, 12];
-const NSPAWN: [usize; 6] = [100, 1000, 10000, 100000, 1000000, 10000000];
 
 type BenchFn = fn(usize, SyncSender<()>, Arc<AtomicUsize>) -> ();
 
@@ -49,14 +47,13 @@ fn spawn_many_from_local(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize
     });
 }
 
-#[inline]
 fn bench_count_down(bench_fn: BenchFn, name: &str, c: &mut Criterion) {
     let (tx, rx) = mpsc::sync_channel(1000);
     let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
 
     let mut group = c.benchmark_group(name);
 
-    for (nspawn, nworkers) in iproduct!(NSPAWN, NWORKERS) {
+    for (nspawn, nworkers) in iproduct!(params::NSPAWN, params::NWORKERS) {
         group.throughput(Throughput::Elements(nspawn as u64));
         group.bench_with_input(
             format!("nspawn({nspawn})/nwork({nworkers})"),
@@ -69,7 +66,6 @@ fn bench_count_down(bench_fn: BenchFn, name: &str, c: &mut Criterion) {
                     let rem = rem.clone();
 
                     rem.store(nspawn, Relaxed);
-                    // collect metrics here TODO()
                     rt.block_on(async {
                         bench_fn(nspawn, tx, rem);
 

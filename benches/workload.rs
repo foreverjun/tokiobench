@@ -7,12 +7,9 @@ use itertools::iproduct;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
+use tokiobench::params;
 use tokiobench::rt;
 use tokiobench::{split, split::SplitType};
-
-const NWORKERS: [usize; 7] = [1, 2, 4, 6, 8, 10, 12];
-const NSPAWN: [usize; 6] = [100, 1000, 10000, 100000, 1000000, 10000000];
-const NSPLIT: [usize; 7] = [1, 2, 4, 6, 8, 10, 12];
 
 type BenchFn = fn(&[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>);
 
@@ -37,14 +34,13 @@ fn work(nspawns: &[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>) {
     }
 }
 
-#[inline]
 fn workload(bench_fn: BenchFn, st: SplitType, reverse: bool, name: &str, c: &mut Criterion) {
     let (tx, rx) = mpsc::sync_channel(1000);
     let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
 
     let mut group = c.benchmark_group(name);
 
-    for (nspawn, nworkers, nsplit) in iproduct!(NSPAWN, NWORKERS, NSPLIT) {
+    for (nspawn, nworkers, nsplit) in iproduct!(params::NSPAWN, params::NWORKERS, params::NSPLIT) {
         group.throughput(Throughput::Elements(nspawn as u64));
         let mut workload = split::split(st, nspawn, nsplit);
 
@@ -63,7 +59,6 @@ fn workload(bench_fn: BenchFn, st: SplitType, reverse: bool, name: &str, c: &mut
                     let rem = rem.clone();
 
                     rem.store(nspawn, Relaxed);
-                    // collect metrics here TODO()
                     rt.block_on(async {
                         bench_fn(workload.as_ref(), tx, rem);
 
@@ -75,23 +70,23 @@ fn workload(bench_fn: BenchFn, st: SplitType, reverse: bool, name: &str, c: &mut
     }
 }
 
-fn rt_spawn_workload_eq(c: &mut Criterion) {
+fn spawn_workload_eq(c: &mut Criterion) {
     workload(work, SplitType::Eq, false, "workload", c);
 }
 
-fn rt_spawn_workload_gradient(c: &mut Criterion) {
+fn spawn_workload_gradient(c: &mut Criterion) {
     workload(work, SplitType::Gradient, false, "workload", c);
 }
 
-// TODO()
-// fn rt_spawn_workload_reverse(c: &mut Criterion) {
-//     workload(work, true, "workload_reversed", c);
-// }
+fn spawn_workload_reverse(c: &mut Criterion) {
+    workload(work, SplitType::Gradient, true, "workload", c);
+}
 
 criterion_group!(
     spawn_benches,
-    //rt_spawn_workload_eq,
-    rt_spawn_workload_gradient
+    spawn_workload_eq,
+    spawn_workload_gradient,
+    spawn_workload_reverse
 );
 
 criterion_main!(spawn_benches);

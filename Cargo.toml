@@ -19,3 +19,6 @@ harness = false
 [[bench]]
 name = "remote"
 harness = false
+
+[features]
+maxvalonly = []
