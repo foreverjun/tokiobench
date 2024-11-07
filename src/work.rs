@@ -42,3 +42,5 @@ pub fn rec() {
 pub fn rec_stall() {
     rec_inner(stall);
 }
+
+pub fn nothing() { std::hint::black_box(()) }
