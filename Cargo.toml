@@ -22,3 +22,5 @@ harness = false
 
 [features]
 maxvalonly = []
+full = []
+small = []
