@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    lpath.Path(p.PLOTS_PATH).mkdir(mode=0o777, parents=False, exist_ok=True)
+    lpath.Path(p.PLOTS_PATH).mkdir(mode=0o777, parents=True, exist_ok=True)
 
     plt.figure(figsize=(10,10))
 
