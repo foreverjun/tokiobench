@@ -47,7 +47,8 @@ fn workload(bench_fn: BenchFn, st: SplitType, name: &str, work: CallBack, c: &mu
 
     let mut group = c.benchmark_group(name);
 
-    for (nspawn, nworkers, nsplit) in iproduct!(params::NSPAWN, params::NWORKERS, params::NSPLIT) {
+    for (nworkers, nsplit) in iproduct!(params::NS_WORKERS, params::NS_SPLIT) {
+        let nspawn = params::N_SPAWN;
         group.throughput(Throughput::Elements(nspawn as u64));
         let workload = split::split(st, nspawn, nsplit);
 

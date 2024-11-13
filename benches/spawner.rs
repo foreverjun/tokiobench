@@ -53,7 +53,7 @@ fn bench_count_down(bench_fn: BenchFn, name: &str, c: &mut Criterion) {
 
     let mut group = c.benchmark_group(name);
 
-    for (nspawn, nworkers) in iproduct!(params::NSPAWN, params::NWORKERS) {
+    for (nspawn, nworkers) in iproduct!(params::NS_SPAWN, params::NS_WORKERS) {
         group.throughput(Throughput::Elements(nspawn as u64));
         group.bench_with_input(
             format!("nspawn({nspawn})/nwork({nworkers})"),
