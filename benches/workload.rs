@@ -9,14 +9,14 @@ use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
 use tokiobench::params;
 use tokiobench::rt;
-use tokiobench::{split, split::SplitType};
 use tokiobench::work;
+use tokiobench::{split, split::SplitType};
 
 type BenchFn = fn(&[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: CallBack);
-type CallBack = fn () -> ();
+type CallBack = fn() -> ();
 
 #[inline]
-fn work(nspawns: &[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: fn () -> ()) {
+fn work(nspawns: &[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: fn() -> ()) {
     for nspawn in nspawns.iter().cloned() {
         let rem = rem.clone();
         let tx = tx.clone();
@@ -86,7 +86,13 @@ fn spawn_workload_eq_recstall(c: &mut Criterion) {
 }
 
 fn spawn_workload_gradient_recstall(c: &mut Criterion) {
-    workload(work, SplitType::Gradient, "workload_recstall", work::nothing, c);
+    workload(
+        work,
+        SplitType::Gradient,
+        "workload_recstall",
+        work::nothing,
+        c,
+    );
 }
 
 criterion_group!(
@@ -95,6 +101,6 @@ criterion_group!(
     spawn_workload_gradient,
     spawn_workload_eq_recstall,
     spawn_workload_gradient_recstall
- );
+);
 
 criterion_main!(spawn_benches);
