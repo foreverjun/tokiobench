@@ -54,12 +54,13 @@ fn bench_count_down(bench_fn: BenchFn, name: &str, c: &mut Criterion) {
     let mut group = c.benchmark_group(name);
 
     for (nspawn, nworkers) in iproduct!(params::NS_SPAWN, params::NS_WORKERS) {
+        let rt = rt::new(nworkers);
+
         group.throughput(Throughput::Elements(nspawn as u64));
         group.bench_with_input(
             format!("nspawn({nspawn})/nwork({nworkers})"),
-            &(nspawn, nworkers),
-            |b, &(nspawn, nworkers)| {
-                let rt = rt::new(nworkers);
+            &nspawn,
+            |b, &nspawn| {
 
                 b.iter(|| {
                     let tx = tx.clone();
