@@ -49,15 +49,14 @@ fn workload(bench_fn: BenchFn, st: SplitType, name: &str, work: CallBack, c: &mu
 
     for (nworkers, nsplit) in iproduct!(params::NS_WORKERS, params::NS_SPLIT) {
         let nspawn = params::N_SPAWN;
-        group.throughput(Throughput::Elements(nspawn as u64));
         let workload = split::split(st, nspawn, nsplit);
-
         let rt = rt::new(nworkers);
 
+        group.throughput(Throughput::Elements(nspawn as u64));
         group.bench_with_input(
             format!("nspawn({nspawn})/nwork({nworkers})/nsplit({nsplit}, {st})"),
-            &(nspawn, nworkers),
-            |b, &(nspawn, _)| {
+            &nspawn,
+            |b, &nspawn| {
                 b.iter(|| {
                     let tx = tx.clone();
                     let rem = rem.clone();
