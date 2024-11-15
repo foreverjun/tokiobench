@@ -17,7 +17,7 @@ type CallBack = fn() -> ();
 
 #[inline]
 fn work(nspawns: &[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: fn() -> ()) {
-    for nspawn in nspawns.iter().cloned() {
+    for &nspawn in nspawns {
         let rem = rem.clone();
         let tx = tx.clone();
 
@@ -41,15 +41,22 @@ fn work(nspawns: &[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: fn()
     }
 }
 
-fn workload(bench_fn: BenchFn, st: SplitType, name: &str, work: CallBack, c: &mut Criterion) {
+fn workload(
+    bench_fn: BenchFn,
+    st: SplitType,
+    nsplits: &[usize],
+    name: &str,
+    work: CallBack,
+    c: &mut Criterion,
+) {
     let (tx, rx) = mpsc::sync_channel(1000);
     let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
 
     let mut group = c.benchmark_group(name);
 
-    for (nworkers, nsplit) in iproduct!(params::NS_WORKERS, params::NS_SPLIT) {
-        let nspawn = params::N_SPAWN;
-        let workload = split::split(st, nspawn, nsplit);
+    for (nworkers, nsplit) in iproduct!(params::NS_WORKERS, nsplits) {
+        let nspawn = params::N_SPAWN_GLOBAL;
+        let workload = split::split(st, nspawn, nsplit.clone());
         let rt = rt::new(nworkers);
 
         group.throughput(Throughput::Elements(nspawn as u64));
@@ -73,23 +80,96 @@ fn workload(bench_fn: BenchFn, st: SplitType, name: &str, work: CallBack, c: &mu
     }
 }
 
-fn spawn_workload_eq(c: &mut Criterion) {
-    workload(work, SplitType::Eq, "workload", work::nothing, c);
-}
+// Uniform local split
 
-fn spawn_workload_gradient(c: &mut Criterion) {
-    workload(work, SplitType::Gradient, "workload", work::nothing, c);
-}
-
-fn spawn_workload_eq_recstall(c: &mut Criterion) {
-    workload(work, SplitType::Eq, "workload_recstall", work::nothing, c);
-}
-
-fn spawn_workload_gradient_recstall(c: &mut Criterion) {
+fn spawn_workload_uniform_local(c: &mut Criterion) {
     workload(
         work,
-        SplitType::Gradient,
-        "workload_recstall",
+        SplitType::Uniform,
+        &params::NS_SPLIT_LOCAL,
+        "workload_local",
+        work::nothing,
+        c,
+    );
+}
+
+fn spawn_workload_uniform_local_recstall(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Uniform,
+        &params::NS_SPLIT_LOCAL,
+        "workload_local_recstall",
+        work::nothing,
+        c,
+    );
+}
+
+// Uniform global split 
+
+fn spawn_workload_uniform_global(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Uniform,
+        &params::NS_SPLIT_GLOBAL,
+        "workload_global",
+        work::nothing,
+        c,
+    );
+}
+
+fn spawn_workload_uniform_global_recstall(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Uniform,
+        &params::NS_SPAWN_GLOBAL,
+        "workload_global_recstall",
+        work::nothing,
+        c,
+    );
+}
+
+// Geometric
+
+fn spawn_workload_geometric_local(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Geometric,
+        &params::NS_SPLIT_LOCAL,
+        "workload_local",
+        work::nothing,
+        c,
+    );
+}
+
+fn spawn_workload_geometric_local_recstall(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Geometric,
+        &params::NS_SPLIT_LOCAL,
+        "workload_local_recstall",
+        work::nothing,
+        c,
+    );
+}
+
+
+fn spawn_workload_geometric_global(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Geometric,
+        &params::NS_SPLIT_LOCAL,
+        "workload_global",
+        work::nothing,
+        c,
+    );
+}
+
+fn spawn_workload_geometric_globa_recstall(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Geometric,
+        &params::NS_SPLIT_LOCAL,
+        "workload_global_recstall",
         work::nothing,
         c,
     );
@@ -97,10 +177,18 @@ fn spawn_workload_gradient_recstall(c: &mut Criterion) {
 
 criterion_group!(
     spawn_benches,
-    spawn_workload_eq,
-    spawn_workload_gradient,
-    spawn_workload_eq_recstall,
-    spawn_workload_gradient_recstall
+
+    spawn_workload_uniform_local,
+    spawn_workload_uniform_local_recstall,
+
+    spawn_workload_uniform_global,
+    spawn_workload_uniform_global_recstall,
+
+    spawn_workload_geometric_local,
+    spawn_workload_geometric_local_recstall,
+
+    spawn_workload_geometric_global,
+    spawn_workload_geometric_globa_recstall,
 );
 
 criterion_main!(spawn_benches);

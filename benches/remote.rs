@@ -9,7 +9,7 @@ use tokiobench::work;
 fn bench(name: &str, func: fn() -> (), c: &mut Criterion) {
     let mut group = c.benchmark_group(name);
 
-    for (nspawn, nworkers) in iproduct!(params::NS_SPAWN, params::NS_WORKERS) {
+    for (nspawn, nworkers) in iproduct!(params::NS_SPAWN_GLOBAL, params::NS_WORKERS) {
         group.throughput(Throughput::Elements(nspawn as u64));
 
         let rt = rt::new(nworkers);

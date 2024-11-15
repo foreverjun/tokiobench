@@ -2,8 +2,8 @@ use core::fmt;
 
 #[derive(Clone, Copy, Debug)]
 pub enum SplitType {
-    Eq,
-    Gradient,
+    Uniform,
+    Geometric,
 }
 
 impl fmt::Display for SplitType {
@@ -14,8 +14,8 @@ impl fmt::Display for SplitType {
 
 pub fn split(stype: SplitType, len: usize, div: usize) -> Vec<usize> {
     match stype {
-        SplitType::Eq => split_eq(len, div),
-        SplitType::Gradient => split_gradient(len, div),
+        SplitType::Uniform => split_eq(len, div),
+        SplitType::Geometric => split_gradient(len, div),
     }
 }
 

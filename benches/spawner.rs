@@ -53,7 +53,7 @@ fn bench_count_down(bench_fn: BenchFn, name: &str, c: &mut Criterion) {
 
     let mut group = c.benchmark_group(name);
 
-    for (nspawn, nworkers) in iproduct!(params::NS_SPAWN, params::NS_WORKERS) {
+    for (nspawn, nworkers) in iproduct!(params::NS_SPAWN_LOCAL, params::NS_WORKERS) {
         let rt = rt::new(nworkers);
 
         group.throughput(Throughput::Elements(nspawn as u64));
@@ -61,7 +61,6 @@ fn bench_count_down(bench_fn: BenchFn, name: &str, c: &mut Criterion) {
             format!("nspawn({nspawn})/nwork({nworkers})"),
             &nspawn,
             |b, &nspawn| {
-
                 b.iter(|| {
                     let tx = tx.clone();
                     let rem = rem.clone();
@@ -88,6 +87,7 @@ fn spawn_many_from_local_bench(c: &mut Criterion) {
 
 criterion_group!(
     spawn_benches,
+    
     spawn_many_from_current_bench,
     spawn_many_from_local_bench
 );
