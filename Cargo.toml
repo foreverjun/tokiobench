@@ -21,6 +21,4 @@ name = "remote"
 harness = false
 
 [features]
-maxvalonly = []
-full = []
-small = []
+dryrun = []

@@ -11,7 +11,7 @@ import params as p
 
 import remote as remote
 import spawner as spawner
-import wokload as workload
+import workload as workload
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
