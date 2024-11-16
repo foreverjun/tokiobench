@@ -17,7 +17,7 @@ def plot(*, bench: str, path: lpath.Path) -> None:
         data_x: list[int] = []
         data_y: list[int] = []
 
-        for nspawn in p.NS_SPAWN:
+        for nspawn in p.NS_SPAWN_LOCAL:
             name = f"nspawn({nspawn})_nwork({nwork})"
             est_path = p.CRITERION_PATH / bench / name / "new" / "estimates.json"
 

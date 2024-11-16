@@ -21,4 +21,4 @@ name = "remote"
 harness = false
 
 [features]
-dryrun = []
+full = []
