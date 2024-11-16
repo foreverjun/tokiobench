@@ -5,7 +5,7 @@ import itertools as it
 
 import params as p
 
-NAMES = it.product(["workload", "workload_recstall"], ["Geometric", "Uniform"])
+NAMES = it.product(["workload_local", "workload_global", "workload_local_recstall", "workload_global_recstall"], ["Geometric", "Uniform"])
 
 def plot(*, bench: str, path: lpath.Path, tsplit: str, nsplits: list[int]) -> None:
     plt.xlabel("nsplit")
@@ -18,7 +18,7 @@ def plot(*, bench: str, path: lpath.Path, tsplit: str, nsplits: list[int]) -> No
         data_y: list[int] = []
 
         for nsplit in nsplits:
-            name = f"nspawn({p.N_SPAWN})_nwork({nwork})_nsplit({nsplit}, {tsplit})"
+            name = f"nspawn({p.N_SPAWN_GLOBAL})_nwork({nwork})_nsplit({nsplit}, {tsplit})"
             est_path = p.CRITERION_PATH / bench / name / "new" / "estimates.json"
 
             instance = json.load(est_path.open())
@@ -41,16 +41,5 @@ def run():
     for (bench_name, tsplit) in NAMES:
         path = p.PLOTS_PATH / f"{bench_name}_{tsplit}"
 
-        # match tsplit:
-            # case "Geometric":
-        try:
-            plot(bench=bench_name, path=path, tsplit=tsplit, nsplits=p.NS_SPLIT_GEOMERIC)
-        except Exception:
-            pass
-
-
-        try: 
-            # case "Uniform":
-                plot(bench=bench_name, path=path, tsplit=tsplit, nsplits=p.NS_SPLIT_UNIFORM)
-        except Exception:
-            pass 
+        plot(bench=bench_name, path=path, tsplit=tsplit, nsplits=p.NS_SPLIT_LOCAL)
+        plot(bench=bench_name, path=path, tsplit=tsplit, nsplits=p.NS_SPLIT_GLOBAL)
