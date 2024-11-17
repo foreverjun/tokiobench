@@ -41,5 +41,6 @@ def run():
     for (bench_name, tsplit) in NAMES:
         path = p.PLOTS_PATH / f"{bench_name}_{tsplit}"
 
-        plot(bench=bench_name, path=path, tsplit=tsplit, nsplits=p.NS_SPLIT_LOCAL)
-        plot(bench=bench_name, path=path, tsplit=tsplit, nsplits=p.NS_SPLIT_GLOBAL)
+        nsplit = p.NS_SPLIT_LOCAL if "local" in bench_name else p.NS_SPLIT_GLOBAL
+
+        plot(bench=bench_name, path=path, tsplit=tsplit, nsplits=nsplit)
