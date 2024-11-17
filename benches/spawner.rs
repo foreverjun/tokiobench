@@ -87,7 +87,6 @@ fn spawn_many_from_local_bench(c: &mut Criterion) {
 
 criterion_group!(
     spawn_benches,
-    
     spawn_many_from_current_bench,
     spawn_many_from_local_bench
 );
