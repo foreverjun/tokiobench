@@ -6,7 +6,7 @@ use tokiobench::params;
 use tokiobench::rt;
 use tokiobench::work;
 
-fn bench(name: &str, func: fn() -> (), c: &mut Criterion) {
+fn bench(name: &str, func: work::Type, c: &mut Criterion) {
     let mut group = c.benchmark_group(name);
 
     for (nspawn, nworkers) in iproduct!(params::NS_SPAWN_GLOBAL, params::NS_WORKERS) {

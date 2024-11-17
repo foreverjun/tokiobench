@@ -5,21 +5,17 @@ use std::time::Duration;
 
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
-use std::sync::{mpsc, Arc};
+use std::sync::{mpsc, mpsc::SyncSender, Arc};
 
-use tokiobench::rt;
-use tokiobench::work;
+use tokio_metrics::RuntimeMonitor;
 
 use std::fs::File;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
-const WAIT_TIME: u64 = 500;
-
-const N_WORKERS: usize = 10;
-const N_SPAWN: usize = 100;
-const YIEDL_BOUND: usize = 100;
-
-const METRIC_CHAN_SIZE: usize = 100000;
+use tokiobench::params;
+use tokiobench::params::metrics as m;
+use tokiobench::rt;
+use tokiobench::spawner;
 
 fn metrics_path() -> PathBuf {
     let mut path = std::env::current_dir().unwrap();
@@ -30,88 +26,113 @@ fn metrics_path() -> PathBuf {
     path
 }
 
-fn mk_metrics_dir() {
-    let path = metrics_path();
-    println!("{:?}", path);
+fn mk_prefix_dir(folder: &str) -> PathBuf {
+    let mut path = metrics_path();
+    path.push(folder);
 
-    if Path::exists(&path) {
-        return;
+    if !Path::exists(&path) {
+        fs::create_dir_all(&path).unwrap();
     }
 
-    fs::create_dir(path).unwrap();
+    path
 }
 
-fn store(name: &str, data: &[u8]) {
+fn store(prefix: &Path, name: &str, data: &[u8]) {
     let result_path = {
-        let mut mp = metrics_path();
-        mp.push(name);
-        mp
+        let mut prefix = PathBuf::from(prefix);
+        prefix.push(name);
+        prefix
     };
 
     let mut f = File::create(result_path).unwrap();
     f.write_all(data).unwrap();
 }
 
+type MetricSyncSender = SyncSender<tokio_metrics::RuntimeMetrics>;
 
-fn main() -> () {
-    let rt = rt::new(N_WORKERS);
+fn run_watcher(
+    metric_tx: MetricSyncSender,
+    rem: Arc<AtomicUsize>,
+    rt_monitor: RuntimeMonitor,
+) -> std::thread::JoinHandle<()> {
+    let thread_handle = thread::spawn(move || {
+        let mut metrics_count = 0;
+
+        for interval in rt_monitor.intervals() {
+            metrics_count += 1;
+            if metrics_count >= m::CHAN_SIZE {
+                panic!("metrics overflow");
+            }
+            metric_tx.send(interval).unwrap();
+
+            if rem.load(Relaxed) == 0 {
+                break;
+            }
+
+            thread::sleep(Duration::from_millis(m::SAMPLE_SLICE));
+        }
+    });
+
+    thread_handle
+}
+
+fn run_iter(
+    count_down: usize,
+    nworkers: usize,
+    bench_fn: spawner::BenchFn,
+) -> Vec<tokio_metrics::RuntimeMetrics> {
+    let rt = rt::new(nworkers);
 
     let (tx, rx) = mpsc::sync_channel(1);
-    let (m_tx, m_rx) = mpsc::sync_channel(METRIC_CHAN_SIZE);
-    let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(N_SPAWN));
+    let (m_tx, m_rx) = mpsc::sync_channel(m::CHAN_SIZE);
+    let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(count_down));
 
     let metrics_handler = {
-        let rem = rem.clone();
+        let rem = Arc::clone(&rem);
         let handle = rt.handle();
-        let runtime_monitor= tokio_metrics::RuntimeMonitor::new(&handle);
+        let rt_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
 
-        let thread_handle = thread::spawn(move || {
-            let mut metrics_count = 0;
-
-            for interval in runtime_monitor.intervals() {
-                metrics_count += 1;
-                if metrics_count >= METRIC_CHAN_SIZE {
-                    panic!("metrics overflow");
-                }
-                m_tx.send(interval).unwrap();
-
-                if rem.load(Relaxed) == 0 {
-                    break;
-                }
-
-                thread::sleep(Duration::from_millis(WAIT_TIME));
-            }
-        });
-
-        thread_handle
+        run_watcher(m_tx, rem, rt_monitor)
     };
 
     rt.block_on(async move {
-        for _ in 0..N_SPAWN {
-            let tx = tx.clone();
-            let rem = rem.clone();
-
-            tokio::spawn(async move {
-                for _ in 0..YIEDL_BOUND {
-                    tokio::task::yield_now().await;
-                    work::rec_stall();
-                }
-
-                if 1 == rem.fetch_sub(1, Relaxed) {
-                    tx.send(()).unwrap();
-                }
-            });
-        }
+        bench_fn(count_down, tx, rem);
 
         rx.recv().unwrap();
     });
 
     metrics_handler.join().unwrap();
 
-    let result = m_rx.into_iter().collect::<Vec<_>>();
-    let result = serde_json::to_vec_pretty(&result).unwrap();
+    return m_rx.into_iter().collect::<Vec<_>>();
+}
 
-    mk_metrics_dir();
+fn run_metrics(name: &str, count_down: usize, nworkers: usize, bench_fn: spawner::BenchFn) {
+    let name = format!("{}_nwork({})", name, nworkers);
 
-    store("spawner.json",&result);
+    let prefix = mk_prefix_dir(&name);
+
+    for niter in 0..m::N_ITER {
+        let metrics = run_iter(count_down, nworkers, bench_fn);
+        let metrics_u8 = serde_json::to_vec_pretty(&metrics).unwrap();
+
+        let name = format!("iter_{niter}.json");
+        store(&prefix, &name, &metrics_u8);
+    }
+}
+
+fn main() -> () {
+    for nwork in params::NS_WORKERS {
+        run_metrics(
+            "spawner_current_recstall",
+            params::N_SPAWN_LOCAL,
+            nwork,
+            spawner::spawn_current_recstall,
+        );
+        run_metrics(
+            "spawner_local_recstall",
+            params::N_SPAWN_LOCAL,
+            nwork,
+            spawner::spawn_local_recstall,
+        );
+    }
 }
