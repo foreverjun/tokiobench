@@ -104,7 +104,7 @@ fn spawn_workload_uniform_local_recstall(c: &mut Criterion) {
     );
 }
 
-// Uniform global split 
+// Uniform global split
 
 fn spawn_workload_uniform_global(c: &mut Criterion) {
     workload(
@@ -128,7 +128,7 @@ fn spawn_workload_uniform_global_recstall(c: &mut Criterion) {
     );
 }
 
-// Geometric
+// Geometric local
 
 fn spawn_workload_geometric_local(c: &mut Criterion) {
     workload(
@@ -152,12 +152,13 @@ fn spawn_workload_geometric_local_recstall(c: &mut Criterion) {
     );
 }
 
+// Geometric global
 
 fn spawn_workload_geometric_global(c: &mut Criterion) {
     workload(
         work,
         SplitType::Geometric,
-        &params::NS_SPLIT_LOCAL,
+        &params::NS_SPLIT_GLOBAL,
         "workload_global",
         work::nothing,
         c,
@@ -168,7 +169,7 @@ fn spawn_workload_geometric_globa_recstall(c: &mut Criterion) {
     workload(
         work,
         SplitType::Geometric,
-        &params::NS_SPLIT_LOCAL,
+        &params::NS_SPLIT_GLOBAL,
         "workload_global_recstall",
         work::nothing,
         c,
@@ -177,16 +178,12 @@ fn spawn_workload_geometric_globa_recstall(c: &mut Criterion) {
 
 criterion_group!(
     spawn_benches,
-
     spawn_workload_uniform_local,
     spawn_workload_uniform_local_recstall,
-
     spawn_workload_uniform_global,
     spawn_workload_uniform_global_recstall,
-
     spawn_workload_geometric_local,
     spawn_workload_geometric_local_recstall,
-
     spawn_workload_geometric_global,
     spawn_workload_geometric_globa_recstall,
 );
