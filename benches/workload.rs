@@ -16,7 +16,7 @@ type BenchFn = fn(&[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: Cal
 type CallBack = fn() -> ();
 
 #[inline]
-fn work(nspawns: &[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: fn() -> ()) {
+fn work(nspawns: &[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: CallBack) {
     for &nspawn in nspawns {
         let rem = rem.clone();
         let tx = tx.clone();

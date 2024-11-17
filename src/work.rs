@@ -2,7 +2,9 @@ use std::time::{Duration, Instant};
 
 const STALL_DUR: Duration = Duration::from_micros(10);
 
-pub fn stall_inner(func: impl Fn() -> ()) {
+pub type Type = fn() -> ();
+
+fn stall_inner(func: impl Fn() -> ()) {
     let now = Instant::now();
 
     while now.elapsed() < STALL_DUR {
