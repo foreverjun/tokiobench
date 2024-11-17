@@ -12,6 +12,7 @@ import params as p
 import remote
 import spawner
 import workload
+import metrics
 
 def init_params(profile: str) -> None:
     p.N_SPAWN_GLOBAL = 100_000
@@ -45,13 +46,21 @@ def init_params(profile: str) -> None:
             p.NS_SPLIT_GLOBAL = [10, 50, 100, 150, 200, 250, 300, 350, 400, 450]
             p.NS_WORKERS = [1, 2, 4, 8, 12, 14, 16, 18, 20, 22, 24]
 
+def on_path_or(p: lpath.Path, run, message: str):
+    if p.exists():
+        run()
+    else:
+        # logging lib
+        print(message)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog='graphpy',
         description='Draw cringe graphs for my diploma',
         epilog="Duty dies last")
 
-    parser.add_argument("profile", default="default")
+    parser.add_argument("-p", "--profile", default="default")
+    parser.add_argument("-c", "--criterion", default=p.CRITERION_PATH)
 
     args = parser.parse_args()
 
@@ -61,6 +70,8 @@ if __name__ == "__main__":
 
     plt.figure(figsize=(10,10))
 
-    remote.run()
-    spawner.run()
-    workload.run()
+    on_path_or(p.REMOTE_PATH, remote.run, "skip remote")
+    on_path_or(p.WORKLOAD_PATH, workload.run, "skip workload")
+    on_path_or(p.SPAWNER_PATH, spawner.run, "skip spawner")
+
+    on_path_or(p.METRICS_PATH, metrics.run, "skip metrics")
