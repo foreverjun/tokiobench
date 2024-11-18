@@ -7,14 +7,15 @@ import params as p
 
 N_ITER = 20
 
-def plot_injection_queue_depth(path) -> None:
-    plt.xlabel("spawn count")
+SUBNAME = ["local", "current"]
+NAMES = [ f"spawner_{subname}_nwork({nwork})" for nwork in p.NS_WORKERS for subname in SUBNAME ]
+
+def plot(mname, bname: str, result_path: lpath.Path) -> None:
+    plt.xlabel(mname)
     plt.ylabel("mean time, ms")
 
-    metrics_path = p.TARGET_PATH / "metrics" / "spawner.json"
-
     for n_iter in range(N_ITER):
-        metrics_path = p.TARGET_PATH / "metrics" / "spawner" / f"iter_{n_iter}.json"
+        metrics_path = p.TARGET_PATH / "metrics" / bname / f"iter_{n_iter}.json"
 
         metrics = json.load(metrics_path.open())
 
@@ -23,7 +24,7 @@ def plot_injection_queue_depth(path) -> None:
         time = 0.0
         for metr in metrics:
 
-            val = metr["injection_queue_depth"]
+            val = metr[mname]
 
             secs = metr["elapsed"]["secs"]
             nanos = metr["elapsed"]["nanos"]
@@ -35,38 +36,14 @@ def plot_injection_queue_depth(path) -> None:
 
         plt.scatter(data_x, data_y)
 
-    plt.savefig(path)
-    plt.clf()
-
-def plot_total_steal_count(path) -> None:
-    plt.xlabel("spawn count")
-    plt.ylabel("mean time, ms")
-
-    for n_iter in range(N_ITER):
-        metrics_path = p.TARGET_PATH / "metrics" / "spawner" / f"iter_{n_iter}.json"
-
-        metrics = json.load(metrics_path.open())
-
-        data_x = []
-        data_y = []
-        time = 0.0
-        for metr in metrics:
-
-            val = metr["total_steal_count"]
-
-            secs = metr["elapsed"]["secs"]
-            nanos = metr["elapsed"]["nanos"]
-
-            time += nanos / 10 ** 6 + secs * 10 ** 3
-
-            data_x.append(time)
-            data_y.append(val)
-
-        plt.scatter(data_x, data_y)
-
-    plt.savefig(path)
+    plt.savefig(result_path)
     plt.clf()
 
 def run():
-    plot_injection_queue_depth(p.PLOTS_PATH / "injection_queue_depth")
-    plot_total_steal_count(p.PLOTS_PATH / "total_steal_count")
+    for bname in NAMES:
+        for mname in ["injection_queue_depth", "total_steal_count"]:
+            dir = p.PLOTS_PATH / mname
+
+            dir.mkdir(mode=0o777, parents=True, exist_ok=True)
+
+            plot(mname, bname, p.PLOTS_PATH / mname / bname)

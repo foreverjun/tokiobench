@@ -9,11 +9,6 @@ import numpy as np
 
 import params as p
 
-import remote
-import spawner
-import workload
-import metrics
-
 def init_params(profile: str) -> None:
     p.N_SPAWN_GLOBAL = 100_000
     p.N_SPAWN_LOCAL = 10_000
@@ -65,6 +60,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     init_params(args.profile)
+
+    import remote
+    import spawner
+    import workload
+    import metrics
 
     lpath.Path(p.PLOTS_PATH).mkdir(mode=0o777, parents=True, exist_ok=True)
 
