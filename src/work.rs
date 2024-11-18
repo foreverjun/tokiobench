@@ -23,7 +23,7 @@ pub fn stall_rec() {
 }
 
 fn rec_inner(func: impl Fn() -> ()) {
-    const LEN: usize = 1000;
+    const LEN: usize = 10;
 
     fn run(func: impl Fn() -> (), count: usize) {
         if count <= 0 {
