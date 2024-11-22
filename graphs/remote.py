@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import itertools as it
 
 import params as p
+import expwrap as ew
 
 NAMES = ["remote_rec", "remote_rec_stall", "remote_stall", "remote_stall_rec"]
 
@@ -39,6 +40,6 @@ def plot(*, bench: str, path: lpath.Path) -> None:
 
 def run():
     for bname in NAMES:
-        plot(bench=bname, path=p.PLOTS_PATH / bname)
+        ew.trylog(lambda: plot(bench=bname, path=p.PLOTS_PATH / bname))
 
 

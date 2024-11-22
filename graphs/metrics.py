@@ -11,8 +11,8 @@ SUBNAME = ["local", "current"]
 NAMES = [ f"spawner_{subname}_nwork({nwork})" for nwork in p.NS_WORKERS for subname in SUBNAME ]
 
 def plot(mname, bname: str, result_path: lpath.Path) -> None:
-    plt.xlabel(mname)
-    plt.ylabel("mean time, ms")
+    plt.xlabel("mean time, ms")
+    plt.ylabel(mname)
 
     for n_iter in range(N_ITER):
         metrics_path = p.TARGET_PATH / "metrics" / bname / f"iter_{n_iter}.json"
