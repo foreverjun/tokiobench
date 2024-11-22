@@ -32,5 +32,5 @@ pub mod metrics {
 
     pub const CHAN_SIZE: usize = 100000;
 
-    pub const N_ITER: usize = 20;
+    pub const N_ITER: usize = 100;
 }
