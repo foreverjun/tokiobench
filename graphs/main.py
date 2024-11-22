@@ -42,6 +42,7 @@ def init_params(profile: str) -> None:
             p.NS_WORKERS = [1, 2, 4, 8, 12, 14, 16, 18, 20, 22, 24]
 
 def on_path_or(p: lpath.Path, run, message: str):
+    print("path", p)
     if p.exists():
         run()
     else:
@@ -56,8 +57,12 @@ if __name__ == "__main__":
 
     parser.add_argument("-p", "--profile", default="default")
     parser.add_argument("-c", "--criterion", default=p.CRITERION_PATH)
+    parser.add_argument("-r", "--result", default=p.PLOTS_PATH)
 
     args = parser.parse_args()
+
+    p.PLOTS_PATH = lpath.Path(args.result)
+    p.CRITERION_PATH = lpath.Path(args.criterion)
 
     init_params(args.profile)
 
@@ -66,12 +71,12 @@ if __name__ == "__main__":
     import workload
     import metrics
 
-    lpath.Path(p.PLOTS_PATH).mkdir(mode=0o777, parents=True, exist_ok=True)
+    lpath.Path(args.result).mkdir(mode=0o777, parents=True, exist_ok=True)
 
     plt.figure(figsize=(10,10))
 
-    on_path_or(p.REMOTE_PATH, remote.run, "skip remote")
-    on_path_or(p.WORKLOAD_PATH, workload.run, "skip workload")
-    on_path_or(p.SPAWNER_PATH, spawner.run, "skip spawner")
+    remote.run()
+    workload.run()
+    spawner.run()
 
     on_path_or(p.METRICS_PATH, metrics.run, "skip metrics")

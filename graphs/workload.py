@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 import itertools as it
 
 import params as p
+import expwrap as ew
 
-NAMES = it.product(["workload_local", "workload_global", "workload_local_recstall", "workload_global_recstall"], ["Geometric", "Uniform"])
+NAMES = it.product(["workload_local", "workload_local_recstall"], ["Geometric", "Uniform"])
 
 def plot(*, bench: str, path: lpath.Path, tsplit: str, nsplits: list[int]) -> None:
     plt.xlabel("nsplit")
@@ -43,4 +44,4 @@ def run():
 
         nsplit = p.NS_SPLIT_LOCAL if "local" in bench_name else p.NS_SPLIT_GLOBAL
 
-        plot(bench=bench_name, path=path, tsplit=tsplit, nsplits=nsplit)
+        ew.trylog(lambda: plot(bench=bench_name, path=path, tsplit=tsplit, nsplits=nsplit))

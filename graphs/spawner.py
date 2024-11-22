@@ -1,9 +1,9 @@
 import json
 import pathlib as lpath
 import matplotlib.pyplot as plt
-import itertools as it
 
 import params as p
+import expwrap as ew
 
 NAMES = ["spawn_current", "spawn_current", "spawn_local"]
 
@@ -37,6 +37,8 @@ def plot(*, bench: str, path: lpath.Path) -> None:
 
     plt.clf()
 
+
+
 def run():
     for bench_name in NAMES:
-        plot(bench=bench_name, path=p.PLOTS_PATH / bench_name)
+        ew.trylog(lambda: plot(bench=bench_name, path=p.PLOTS_PATH / bench_name))
