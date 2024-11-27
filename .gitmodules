@@ -1,0 +1,6 @@
+[submodule "tokio-metrics"]
+	path = tokio-metrics
+	url = git@github.com:IgorErin/tokio-metrics.git
+[submodule "tokio"]
+	path = tokio
+	url = git@github.com:IgorErin/tokio.git
