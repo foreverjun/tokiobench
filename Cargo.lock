@@ -658,7 +658,6 @@ dependencies = [
 [[package]]
 name = "tokio"
 version = "1.41.0"
-source = "git+https://github.com/IgorErin/tokio.git#946401c345d672d357693740bc51f77bc678c5c4"
 dependencies = [
  "backtrace",
  "bytes",
@@ -685,7 +684,6 @@ dependencies = [
 [[package]]
 name = "tokio-macros"
 version = "2.4.0"
-source = "git+https://github.com/IgorErin/tokio.git#946401c345d672d357693740bc51f77bc678c5c4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -695,7 +693,6 @@ dependencies = [
 [[package]]
 name = "tokio-metrics"
 version = "0.3.1"
-source = "git+https://github.com/IgorErin/tokio-metrics.git?branch=iea/tokiodep#dd329d2cf8fbcfc95cc8be26786ebe90f380a319"
 dependencies = [
  "futures-util",
  "pin-project-lite",
