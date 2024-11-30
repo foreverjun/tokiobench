@@ -6,7 +6,7 @@ import itertools as it
 import params as p
 import expwrap as ew
 
-NAMES = it.product(["workload_local", "workload_local_recstall"], ["Geometric", "Uniform"])
+NAMES = it.product(["workload_local"], ["Geometric", "Uniform"])
 
 def plot(*, bench: str, path: lpath.Path, tsplit: str, nsplits: list[int]) -> None:
     plt.xlabel("nsplit")
