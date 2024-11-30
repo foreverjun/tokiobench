@@ -126,13 +126,13 @@ fn main() -> () {
             "spawner_current_recstall",
             params::N_SPAWN_LOCAL,
             nwork,
-            spawner::spawn_current_recstall,
+            spawner::spawn_current_rec,
         );
         run_metrics(
             "spawner_local_recstall",
             params::N_SPAWN_LOCAL,
             nwork,
-            spawner::spawn_local_recstall,
+            spawner::spawn_local_rec,
         );
     }
 }

@@ -42,7 +42,6 @@ def init_params(profile: str) -> None:
             p.NS_WORKERS = [1, 2, 4, 8, 12, 14, 16, 18, 20, 22, 24]
 
 def on_path_or(p: lpath.Path, run, message: str):
-    print("path", p)
     if p.exists():
         run()
     else:

@@ -29,8 +29,8 @@ fn spawn_current(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>, work:
 }
 
 #[inline]
-pub fn spawn_current_recstall(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>) {
-    spawn_current(nspawn, tx, rem, work::rec_stall);
+pub fn spawn_current_rec(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>) {
+    spawn_current(nspawn, tx, rem, work::rec);
 }
 
 #[inline]
@@ -55,6 +55,6 @@ fn spawn_local(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: f
 }
 
 #[inline]
-pub fn spawn_local_recstall(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>) {
-    spawn_local(nspawn, tx, rem, work::rec_stall);
+pub fn spawn_local_rec(nspawn: usize, tx: SyncSender<()>, rem: Arc<AtomicUsize>) {
+    spawn_local(nspawn, tx, rem, work::rec);
 }

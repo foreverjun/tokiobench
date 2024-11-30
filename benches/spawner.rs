@@ -41,11 +41,11 @@ fn bench_count_down(bench_fn: sp::BenchFn, name: &str, c: &mut Criterion) {
 }
 
 fn spawn_many_from_current_bench(c: &mut Criterion) {
-    bench_count_down(sp::spawn_current_recstall, "spawn_current", c)
+    bench_count_down(sp::spawn_current_rec, "spawn_current", c)
 }
 
 fn spawn_many_from_local_bench(c: &mut Criterion) {
-    bench_count_down(sp::spawn_local_recstall, "spawn_local", c);
+    bench_count_down(sp::spawn_local_rec, "spawn_local", c);
 }
 
 criterion_group!(

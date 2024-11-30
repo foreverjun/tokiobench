@@ -1,9 +1,6 @@
-# one script for run benches with zero deps
-# json file for constant sharing
-
 .PHONY: bench
 bench:
-	python3 bench.py
+	python3 .benchpy/bench.py
 
 .PHONY: clean
 clean:
@@ -12,6 +9,7 @@ clean:
 	cd tokio; cargo clean
 	cd tokio-metrics; cargo clean
 
-.PHONY: cfgup
-cfgup:
-	echo TODO # update config via
+.PHONY: plot
+plot:
+	python3 .benchpy/plot.py
+
