@@ -2,4 +2,4 @@
 
 /graphs/venv
 /graphs/output
-/graphs/__pycache__
+**/__pycache__

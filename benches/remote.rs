@@ -39,24 +39,9 @@ fn remote_rec(c: &mut Criterion) {
     bench("remote_rec", work::rec, c);
 }
 
-fn remote_stall(c: &mut Criterion) {
-    bench("remote_stall", work::stall, c);
-}
-
-fn remote_rec_stall(c: &mut Criterion) {
-    bench("remote_rec_stall", work::rec_stall, c);
-}
-
-fn remote_stall_rec(c: &mut Criterion) {
-    bench("remote_stall_rec", work::stall_rec, c);
-}
-
 criterion_group!(
     spawn_benches,
     remote_rec,
-    remote_stall,
-    remote_rec_stall,
-    remote_stall_rec
 );
 
 criterion_main!(spawn_benches);

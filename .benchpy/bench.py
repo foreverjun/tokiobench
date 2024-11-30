@@ -1,10 +1,12 @@
 from subprocess import run as prun
+import sys
 from pathlib import Path
+import os
+
+import params
 
 def sprun(*args, **kars):
     prun(*args, **kars, check=True)
-
-BRANCHES = ["iea/rev-next-task", "master"]
 
 TARGET = Path("target")
 CRITERION = TARGET / "criterion"
@@ -13,7 +15,6 @@ def cleanup() -> None:
     sprun(["rm", "-rf", str(TARGET)])
 
 def cargo_bench(*, feats: list[str]) -> None:
-    feats = [ f"-F {f}" for f in feats ]
     sprun(["cargo", "bench", *feats])
 
 def switch(br: str):
@@ -21,24 +22,29 @@ def switch(br: str):
         sprun(["git", "switch", br], cwd=proj)
 
     def pull(proj: str) -> None:
-        sprun(["git", "pull", "--rebase"], cwd=proj)
+        if os.environ.get("PULL"):
+            sprun(["git", "pull", "--rebase"], cwd=proj)
 
     switch("tokio", br)
-
     pull("tokio")
+
+    switch("tokio-metrics", "iea/submodule")
     pull("tokio-metrics")
 
 def destination(br: str) -> Path: return TARGET / "branhes" / br
 
 def save_result(br: str) -> None:
-    sprun(["cp", "-r", str(CRITERION), str(destination(br))])
+    dest = destination(br)
+    dest.mkdir(parents=True, exist_ok=True)
+    sprun(["cp", "-r", str(CRITERION), str(dest)])
 
 if __name__ == "__main__":
-    for b in BRANCHES:
+    for b in params.BRANCHES:
         switch(b)
 
-        print(f"running `cargo bench` for {b}")
-        cargo_bench(feats=["full"])
+        feats = [ f"-F {f}" for f in sys.argv[1:] ]
+        print(f"running `cargo bench` for {b} with {feats}")
+        sprun(["cargo", "bench", *feats])
 
         save_result(b)
 
