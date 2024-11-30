@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import params as p
 import expwrap as ew
 
-NAMES = ["spawn_current", "spawn_current", "spawn_local"]
+NAMES = ["spawn_current", "spawn_local"]
 
 def plot(*, bench: str, path: lpath.Path) -> None:
     plt.xlabel("spawn count")

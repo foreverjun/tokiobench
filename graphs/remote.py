@@ -6,7 +6,7 @@ import itertools as it
 import params as p
 import expwrap as ew
 
-NAMES = ["remote_rec", "remote_rec_stall", "remote_stall", "remote_stall_rec"]
+NAMES = ["remote_rec"]
 
 def plot(*, bench: str, path: lpath.Path) -> None:
     plt.xlabel("spawn count")
