@@ -16,7 +16,7 @@ type BenchFn = fn(&[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: Cal
 type CallBack = fn() -> ();
 
 #[inline]
-fn work(nspawns: &[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: CallBack) {
+fn bench(nspawns: &[usize], tx: SyncSender<()>, rem: Arc<AtomicUsize>, work: CallBack) {
     for &nspawn in nspawns {
         let rem = rem.clone();
         let tx = tx.clone();
@@ -84,7 +84,7 @@ fn workload(
 
 fn spawn_workload_uniform_local(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Uniform,
         &params::NS_SPLIT_LOCAL,
         "workload_local",
@@ -95,7 +95,7 @@ fn spawn_workload_uniform_local(c: &mut Criterion) {
 
 fn spawn_workload_uniform_local_float(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Uniform,
         &params::NS_SPLIT_LOCAL,
         "workload_local",
@@ -106,7 +106,7 @@ fn spawn_workload_uniform_local_float(c: &mut Criterion) {
 
 fn spawn_workload_uniform_local_int(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Uniform,
         &params::NS_SPLIT_LOCAL,
         "workload_local",
@@ -119,7 +119,7 @@ fn spawn_workload_uniform_local_int(c: &mut Criterion) {
 
 fn spawn_workload_uniform_global(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Uniform,
         &params::NS_SPLIT_GLOBAL,
         "workload_global",
@@ -130,7 +130,7 @@ fn spawn_workload_uniform_global(c: &mut Criterion) {
 
 fn spawn_workload_uniform_global_float(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Uniform,
         &params::NS_SPLIT_GLOBAL,
         "workload_global",
@@ -141,7 +141,7 @@ fn spawn_workload_uniform_global_float(c: &mut Criterion) {
 
 fn spawn_workload_uniform_global_int(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Uniform,
         &params::NS_SPLIT_GLOBAL,
         "workload_global",
@@ -154,7 +154,7 @@ fn spawn_workload_uniform_global_int(c: &mut Criterion) {
 
 fn spawn_workload_geometric_local(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Geometric,
         &params::NS_SPLIT_LOCAL,
         "workload_local",
@@ -165,7 +165,7 @@ fn spawn_workload_geometric_local(c: &mut Criterion) {
 
 fn spawn_workload_geometric_local_float(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Geometric,
         &params::NS_SPLIT_LOCAL,
         "workload_local",
@@ -176,7 +176,7 @@ fn spawn_workload_geometric_local_float(c: &mut Criterion) {
 
 fn spawn_workload_geometric_local_int(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Geometric,
         &params::NS_SPLIT_LOCAL,
         "workload_local",
@@ -189,7 +189,7 @@ fn spawn_workload_geometric_local_int(c: &mut Criterion) {
 
 fn spawn_workload_geometric_global(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Geometric,
         &params::NS_SPLIT_GLOBAL,
         "workload_global",
@@ -200,7 +200,7 @@ fn spawn_workload_geometric_global(c: &mut Criterion) {
 
 fn spawn_workload_geometric_global_float(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Geometric,
         &params::NS_SPLIT_GLOBAL,
         "workload_global",
@@ -211,7 +211,7 @@ fn spawn_workload_geometric_global_float(c: &mut Criterion) {
 
 fn spawn_workload_geometric_global_int(c: &mut Criterion) {
     workload(
-        work,
+        bench,
         SplitType::Geometric,
         &params::NS_SPLIT_GLOBAL,
         "workload_global",
