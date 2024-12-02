@@ -6,7 +6,7 @@ use tokiobench::params;
 use tokiobench::rt;
 use tokiobench::work;
 
-fn bench(name: &str, func: work::Type, c: &mut Criterion) {
+fn bench(name: &str, func: work::Work, c: &mut Criterion) {
     let mut group = c.benchmark_group(name);
 
     for (nspawn, nworkers) in iproduct!(params::NS_SPAWN_GLOBAL, params::NS_WORKERS) {
@@ -35,13 +35,18 @@ fn bench(name: &str, func: work::Type, c: &mut Criterion) {
     }
 }
 
-fn remote_rec(c: &mut Criterion) {
-    bench("remote_rec", work::rec, c);
+fn remote(c: &mut Criterion) {
+    bench("remote", work::nothing, c);
 }
 
-criterion_group!(
-    spawn_benches,
-    remote_rec,
-);
+fn remote_float_max(c: &mut Criterion) {
+    bench("remote_float_max", work::float_max, c);
+}
 
-criterion_main!(spawn_benches);
+fn remote_int_max(c: &mut Criterion) {
+    bench("remote_int_max", work::int_max, c);
+}
+
+criterion_group!(benches, remote, remote_float_max, remote_int_max,);
+
+criterion_main!(benches);

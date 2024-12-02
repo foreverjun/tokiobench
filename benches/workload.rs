@@ -93,6 +93,28 @@ fn spawn_workload_uniform_local(c: &mut Criterion) {
     );
 }
 
+fn spawn_workload_uniform_local_float(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Uniform,
+        &params::NS_SPLIT_LOCAL,
+        "workload_local",
+        work::float_max,
+        c,
+    );
+}
+
+fn spawn_workload_uniform_local_int(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Uniform,
+        &params::NS_SPLIT_LOCAL,
+        "workload_local",
+        work::int_max,
+        c,
+    );
+}
+
 // Uniform global split
 
 fn spawn_workload_uniform_global(c: &mut Criterion) {
@@ -102,6 +124,28 @@ fn spawn_workload_uniform_global(c: &mut Criterion) {
         &params::NS_SPLIT_GLOBAL,
         "workload_global",
         work::nothing,
+        c,
+    );
+}
+
+fn spawn_workload_uniform_global_float(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Uniform,
+        &params::NS_SPLIT_GLOBAL,
+        "workload_global",
+        work::float_max,
+        c,
+    );
+}
+
+fn spawn_workload_uniform_global_int(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Uniform,
+        &params::NS_SPLIT_GLOBAL,
+        "workload_global",
+        work::int_max,
         c,
     );
 }
@@ -119,6 +163,28 @@ fn spawn_workload_geometric_local(c: &mut Criterion) {
     );
 }
 
+fn spawn_workload_geometric_local_float(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Geometric,
+        &params::NS_SPLIT_LOCAL,
+        "workload_local",
+        work::float_max,
+        c,
+    );
+}
+
+fn spawn_workload_geometric_local_int(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Geometric,
+        &params::NS_SPLIT_LOCAL,
+        "workload_local",
+        work::int_max,
+        c,
+    );
+}
+
 // Geometric global
 
 fn spawn_workload_geometric_global(c: &mut Criterion) {
@@ -132,12 +198,45 @@ fn spawn_workload_geometric_global(c: &mut Criterion) {
     );
 }
 
+fn spawn_workload_geometric_global_float(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Geometric,
+        &params::NS_SPLIT_GLOBAL,
+        "workload_global",
+        work::float_max,
+        c,
+    );
+}
+
+fn spawn_workload_geometric_global_int(c: &mut Criterion) {
+    workload(
+        work,
+        SplitType::Geometric,
+        &params::NS_SPLIT_GLOBAL,
+        "workload_global",
+        work::int_max,
+        c,
+    );
+}
+
 criterion_group!(
     spawn_benches,
+    // work: nothing
     spawn_workload_uniform_local,
     spawn_workload_uniform_global,
     spawn_workload_geometric_local,
     spawn_workload_geometric_global,
+    // work: float max
+    spawn_workload_uniform_local_float,
+    spawn_workload_uniform_global_float,
+    spawn_workload_geometric_local_float,
+    spawn_workload_geometric_global_float,
+    // work: int max
+    spawn_workload_uniform_local_int,
+    spawn_workload_uniform_global_int,
+    spawn_workload_geometric_local_int,
+    spawn_workload_geometric_global_int,
 );
 
 criterion_main!(spawn_benches);

@@ -10,7 +10,7 @@ use tokiobench::params;
 use tokiobench::rt;
 use tokiobench::spawner as sp;
 
-fn bench_count_down(bench_fn: sp::BenchFn, name: &str, c: &mut Criterion) {
+fn bench(bench_fn: sp::BenchFn, name: &str, c: &mut Criterion) {
     let (tx, rx) = mpsc::sync_channel(1000);
     let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
 
@@ -40,18 +40,38 @@ fn bench_count_down(bench_fn: sp::BenchFn, name: &str, c: &mut Criterion) {
     }
 }
 
-fn spawn_many_from_current_bench(c: &mut Criterion) {
-    bench_count_down(sp::spawn_current_rec, "spawn_current", c)
+fn spawn_current(c: &mut Criterion) {
+    bench(sp::spawn_current, "spawn_current", c)
 }
 
-fn spawn_many_from_local_bench(c: &mut Criterion) {
-    bench_count_down(sp::spawn_local_rec, "spawn_local", c);
+fn spawn_local(c: &mut Criterion) {
+    bench(sp::spawn_local, "spawn_local", c);
+}
+
+fn spawn_local_float_max(c: &mut Criterion) {
+    bench(sp::spawn_local, "spawn_local_float_max", c);
+}
+
+fn spawn_local_int_max(c: &mut Criterion) {
+    bench(sp::spawn_local, "spawn_local_int_max", c);
+}
+
+fn spawn_current_float_max(c: &mut Criterion) {
+    bench(sp::spawn_current, "spawn_current_float_max", c)
+}
+
+fn spawn_current_int_max(c: &mut Criterion) {
+    bench(sp::spawn_current, "spawn_current_int_max", c)
 }
 
 criterion_group!(
-    spawn_benches,
-    spawn_many_from_current_bench,
-    spawn_many_from_local_bench
+    benches,
+    spawn_current,
+    spawn_local,
+    spawn_local_float_max,
+    spawn_local_int_max,
+    spawn_current_float_max,
+    spawn_current_int_max,
 );
 
-criterion_main!(spawn_benches);
+criterion_main!(benches);

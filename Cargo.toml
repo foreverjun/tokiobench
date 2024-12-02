@@ -16,8 +16,12 @@ name = "tokiobench"
 path = "src/lib.rs"
 
 [[bin]]
-name = "main"
-path = "src/main.rs"
+name = "mspawner"
+path = "src/mspawner.rs"
+
+[[bin]]
+name = "mremote"
+path = "src/mremote.rs"
 
 [[bench]]
 name = "spawner"

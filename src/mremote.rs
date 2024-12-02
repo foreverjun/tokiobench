@@ -15,7 +15,6 @@ use std::path::{Path, PathBuf};
 use tokiobench::params;
 use tokiobench::params::metrics as m;
 use tokiobench::rt;
-use tokiobench::spawner;
 
 fn metrics_path() -> PathBuf {
     let mut path = std::env::current_dir().unwrap();
@@ -76,16 +75,11 @@ fn run_watcher(
     thread_handle
 }
 
-fn run_iter(
-    count_down: usize,
-    nworkers: usize,
-    bench_fn: spawner::BenchFn,
-) -> Vec<tokio_metrics::RuntimeMetrics> {
+fn run_iter(nspawn: usize, nworkers: usize) -> Vec<tokio_metrics::RuntimeMetrics> {
     let rt = rt::new(nworkers);
 
-    let (tx, rx) = mpsc::sync_channel(1);
     let (m_tx, m_rx) = mpsc::sync_channel(m::CHAN_SIZE);
-    let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(count_down));
+    let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(1));
 
     let metrics_handler = {
         let rem = Arc::clone(&rem);
@@ -95,24 +89,33 @@ fn run_iter(
         run_watcher(m_tx, rem, rt_monitor)
     };
 
-    rt.block_on(async move {
-        bench_fn(count_down, tx, rem);
+    let mut handles: Vec<tokio::task::JoinHandle<()>> = Vec::with_capacity(nspawn);
 
-        rx.recv().unwrap();
+    for _ in 0..nspawn {
+        handles.push(rt.spawn(async move {
+            std::hint::black_box(()); // TODO(work)
+        }));
+    }
+
+    rt.block_on(async {
+        for handle in handles.drain(..) {
+            handle.await.unwrap();
+        }
     });
 
+    rem.fetch_sub(1, Relaxed);
     metrics_handler.join().unwrap();
 
     return m_rx.into_iter().collect::<Vec<_>>();
 }
 
-fn run_metrics(name: &str, count_down: usize, nworkers: usize, bench_fn: spawner::BenchFn) {
+fn run_metrics(name: &str, nspawn: usize, nworkers: usize) {
     let name = format!("{}_nwork({})", name, nworkers);
 
     let prefix = mk_prefix_dir(&name);
 
     for niter in 0..m::N_ITER {
-        let metrics = run_iter(count_down, nworkers, bench_fn);
+        let metrics = run_iter(nspawn, nworkers);
         let metrics_u8 = serde_json::to_vec_pretty(&metrics).unwrap();
 
         let name = format!("iter_{niter}.json");
@@ -122,17 +125,6 @@ fn run_metrics(name: &str, count_down: usize, nworkers: usize, bench_fn: spawner
 
 fn main() -> () {
     for nwork in params::NS_WORKERS {
-        run_metrics(
-            "spawner_current_recstall",
-            params::N_SPAWN_LOCAL,
-            nwork,
-            spawner::spawn_current_rec,
-        );
-        run_metrics(
-            "spawner_local_recstall",
-            params::N_SPAWN_LOCAL,
-            nwork,
-            spawner::spawn_local_rec,
-        );
+        run_metrics("remote", 10000000, nwork);
     }
 }
