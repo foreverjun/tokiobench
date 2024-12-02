@@ -13,3 +13,6 @@ clean:
 plot:
 	python3 .benchpy/plot.py
 
+.PHONY: metr
+metr:
+	python3 .benchpy/metric.py
