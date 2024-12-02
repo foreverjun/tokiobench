@@ -1,50 +1,21 @@
-from subprocess import run as prun
-import sys
+import subprocess
 from pathlib import Path
 import os
 
+import common as c
 import params
 
-def sprun(*args, **kars):
-    prun(*args, **kars, check=True)
-
-TARGET = Path("target")
-CRITERION = TARGET / "criterion"
-
-def cleanup() -> None:
-    sprun(["rm", "-rf", str(TARGET)])
-
-def cargo_bench(*, feats: list[str]) -> None:
-    sprun(["cargo", "bench", *feats])
-
-def switch(br: str):
-    def switch(proj: str, br: str) -> None:
-        sprun(["git", "switch", br], cwd=proj)
-
-    def pull(proj: str) -> None:
-        if os.environ.get("PULL"):
-            sprun(["git", "pull", "--rebase"], cwd=proj)
-
-    switch("tokio", br)
-    pull("tokio")
-
-    switch("tokio-metrics", "iea/submodule")
-    pull("tokio-metrics")
-
-def destination(br: str) -> Path: return TARGET / "branhes" / br
-
-def save_result(br: str) -> None:
-    dest = destination(br)
-    dest.mkdir(parents=True, exist_ok=True)
-    sprun(["cp", "-r", str(CRITERION), str(dest)])
-
 if __name__ == "__main__":
-    for b in params.BRANCHES:
-        switch(b)
+    for br in params.BRANCHES:
+        c.switch(br)
 
-        feats = [ f"-F {f}" for f in sys.argv[1:] ]
-        print(f"running `cargo bench` for {b} with {feats}")
-        sprun(["cargo", "bench", *feats])
+        profile = "-F full" if os.environ.get("FULL") else ""
 
-        save_result(b)
+        print(f"running `cargo bench` for {br} with {profile}")
+        with open(c.mklogfile("bench.err"), "w") as stderr:
+            c.sprun(["cargo", "bench", profile],
+                    stdout=subprocess.DEVNULL,
+                    stderr=stderr)
+
+        c.save_result(src=c.TARGET / "criterion", br=br)
 
