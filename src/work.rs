@@ -1,50 +1,78 @@
-use std::time::{Duration, Instant};
+use std::hint::black_box;
 
-const STALL_DUR: Duration = Duration::from_micros(10);
+const STRANGE_FLOAT: f64 = 3.123456;
+const STRANGE_INT: usize = 13;
 
-pub type Type = fn() -> ();
+pub type Work = fn() -> ();
 
-fn stall_inner(func: impl Fn() -> ()) {
-    let now = Instant::now();
-
-    while now.elapsed() < STALL_DUR {
-        std::hint::black_box(func());
-
-        std::thread::yield_now();
-    }
+pub enum Op {
+    Mul,
+    Add,
+    MulAdd,
 }
 
-pub fn stall() {
-    stall_inner(|| {});
-}
-
-pub fn stall_rec() {
-    stall_inner(rec);
-}
-
-fn rec_inner(func: impl Fn() -> ()) {
-    const LEN: usize = 10;
-
-    fn run(func: impl Fn() -> (), count: usize) {
-        if count <= 0 {
-            return;
+#[inline(always)]
+fn float(count: usize, op: Op) {
+    let mut n: f64 = 0.0;
+    for _ in 0..count {
+        match op {
+            Op::Add => n += black_box(STRANGE_FLOAT),
+            Op::Mul => n *= black_box(STRANGE_FLOAT),
+            Op::MulAdd => n = n.mul_add(black_box(STRANGE_FLOAT), black_box(STRANGE_FLOAT)),
         }
+    }
+    black_box(n);
+}
 
-        std::hint::black_box(func());
-        std::hint::black_box(run(func, count - 1));
+#[inline(always)]
+fn int(count: usize, op: Op) {
+    let mut n: usize = 0;
+
+    for _ in 0..count {
+        match op {
+            Op::Add => n = n.wrapping_add(black_box(STRANGE_INT)),
+            Op::Mul => n = n.wrapping_mul(black_box(STRANGE_INT)),
+            Op::MulAdd => {
+                n = n.wrapping_mul(black_box(STRANGE_INT));
+                n = n.wrapping_add(black_box(STRANGE_INT));
+            }
+        }
     }
 
-    run(func, LEN)
+    black_box(n);
 }
 
-pub fn rec() {
-    rec_inner(|| {});
+// float
+#[inline(always)]
+pub fn float_min() {
+    float(crate::params::work::MIN, Op::MulAdd);
 }
 
-pub fn rec_stall() {
-    rec_inner(stall);
+#[inline(always)]
+pub fn float_mid() {
+    float(crate::params::work::MID, Op::MulAdd);
 }
 
-pub fn nothing() {
-    std::hint::black_box(())
+#[inline(always)]
+pub fn float_max() {
+    float(crate::params::work::MAX, Op::MulAdd);
 }
+
+// int
+#[inline(always)]
+pub fn int_min() {
+    int(crate::params::work::MIN, Op::MulAdd);
+}
+
+#[inline(always)]
+pub fn int_mid() {
+    int(crate::params::work::MID, Op::MulAdd);
+}
+
+#[inline(always)]
+pub fn int_max() {
+    int(crate::params::work::MAX, Op::MulAdd);
+}
+
+#[inline(always)]
+pub fn nothing() {}
