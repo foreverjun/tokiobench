@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::{fs, thread};
 
 use std::time::Duration;
@@ -9,9 +8,7 @@ use std::sync::{mpsc, mpsc::SyncSender, Arc};
 
 use tokio_metrics::RuntimeMonitor;
 
-use std::fs::File;
 use std::path::{Path, PathBuf};
-
 use tokiobench::params;
 use tokiobench::params::metrics as m;
 use tokiobench::rt;

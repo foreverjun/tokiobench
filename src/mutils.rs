@@ -1,7 +1,5 @@
-use std::fs::File;
 use std::path::{Path, PathBuf};
 use csv::Writer;
-use crate::serializer;
 use crate::serializer::MetricsSerializable;
 
 pub fn store(prefix: &Path, name: &str, metrics : &Vec<MetricsSerializable>) {
