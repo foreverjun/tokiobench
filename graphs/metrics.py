@@ -35,7 +35,7 @@ def regplot_lowess_ci(data, x, y, ci_level, n_boot, **kwargs):
     err_bands = sns.utils.ci(beta_boots, ci_level, axis=0)
     y_plt = reg_func(x_, y_)
 
-    ax = sns.lineplot(x=x_grid, y=y_plt, **kwargs)
+    ax = sns.lineplot(x=x_grid, y=y_plt, color='red', **kwargs)
     sns.scatterplot(x=x_, y=y_, ax=ax, **kwargs)
     ax.fill_between(x_grid, *err_bands, alpha=.15, **kwargs)
     return ax
@@ -74,4 +74,3 @@ def run():
             plot_dir = bdir / f.name
             plot_dir.mkdir(mode=0o777, parents=True, exist_ok=True)
             lowess_plot(df, labels, plot_dir)
-            
