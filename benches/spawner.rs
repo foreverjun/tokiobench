@@ -49,19 +49,19 @@ fn spawn_local(c: &mut Criterion) {
 }
 
 fn spawn_local_float_max(c: &mut Criterion) {
-    bench(sp::spawn_local, "spawn_local_float_max", c);
+    bench(sp::spawn_local_max_float, "spawn_local_float_max", c);
 }
 
 fn spawn_local_int_max(c: &mut Criterion) {
-    bench(sp::spawn_local, "spawn_local_int_max", c);
+    bench(sp::spawn_local_max_int, "spawn_local_int_max", c);
 }
 
 fn spawn_current_float_max(c: &mut Criterion) {
-    bench(sp::spawn_current, "spawn_current_float_max", c)
+    bench(sp::spawn_current_max_float, "spawn_current_float_max", c)
 }
 
 fn spawn_current_int_max(c: &mut Criterion) {
-    bench(sp::spawn_current, "spawn_current_int_max", c)
+    bench(sp::spawn_current_max_int, "spawn_current_int_max", c)
 }
 
 criterion_group!(
