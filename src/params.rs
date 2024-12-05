@@ -25,7 +25,8 @@ pub const NS_SPLIT_GLOBAL: [usize; 10] = [10, 50, 100, 150, 200, 250, 300, 350, 
 pub const N_SPAWN_GLOBAL: usize = 100_000;
 pub const N_SPAWN_LOCAL: usize = 10_000;
 
-pub const YIEDL_BOUND: usize = 10;
+pub const YIELD_BOUND: usize = 10;
+pub const SPAWNER_WORK_BOUND: usize = 4;
 
 pub mod work {
     pub const MIN: usize = 1000;

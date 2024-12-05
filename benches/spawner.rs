@@ -6,11 +6,12 @@ use itertools::iproduct;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
-use tokiobench::params;
 use tokiobench::rt;
 use tokiobench::spawner as sp;
+use tokiobench::work::Work;
+use tokiobench::{params, work};
 
-fn bench(bench_fn: sp::BenchFn, name: &str, c: &mut Criterion) {
+fn bench(bench_fn: sp::BenchFn, work: Work, spawn_work: Option<Work>, name: &str, c: &mut Criterion) {
     let (tx, rx) = mpsc::sync_channel(1000);
     let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
 
@@ -30,7 +31,7 @@ fn bench(bench_fn: sp::BenchFn, name: &str, c: &mut Criterion) {
 
                     rem.store(nspawn, Relaxed);
                     rt.block_on(async {
-                        bench_fn(nspawn, tx, rem);
+                        bench_fn(nspawn, tx, rem, work, spawn_work);
 
                         rx.recv().unwrap();
                     });
@@ -41,27 +42,27 @@ fn bench(bench_fn: sp::BenchFn, name: &str, c: &mut Criterion) {
 }
 
 fn spawn_current(c: &mut Criterion) {
-    bench(sp::spawn_current, "spawn_current", c)
+    bench(sp::spawn_current, work::nothing, None, "spawn_current", c)
 }
 
 fn spawn_local(c: &mut Criterion) {
-    bench(sp::spawn_local, "spawn_local", c);
+    bench(sp::spawn_local, work::nothing, None, "spawn_local", c);
 }
 
 fn spawn_local_float_max(c: &mut Criterion) {
-    bench(sp::spawn_local_max_float, "spawn_local_float_max", c);
+    bench(sp::spawn_local, work::float_max, None, "spawn_local_float_max", c);
 }
 
 fn spawn_local_int_max(c: &mut Criterion) {
-    bench(sp::spawn_local_max_int, "spawn_local_int_max", c);
+    bench(sp::spawn_local, work::int_max, None, "spawn_local_int_max", c);
 }
 
 fn spawn_current_float_max(c: &mut Criterion) {
-    bench(sp::spawn_current_max_float, "spawn_current_float_max", c)
+    bench(sp::spawn_current, work::float_max, None, "spawn_current_float_max", c)
 }
 
 fn spawn_current_int_max(c: &mut Criterion) {
-    bench(sp::spawn_current_max_int, "spawn_current_int_max", c)
+    bench(sp::spawn_current, work::int_max, None, "spawn_current_int_max", c)
 }
 
 criterion_group!(
