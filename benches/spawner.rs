@@ -57,6 +57,13 @@ fn spawn_local_int_max(c: &mut Criterion) {
     bench(sp::spawn_local, work::int_max, None, "spawn_local_int_max", c);
 }
 
+fn spawn_local_float_max_s_float_min(c: &mut Criterion) {
+    bench(sp::spawn_local, work::float_max, Some(work::float_min), "spawn_local_float_max_s_float_min", c)
+}
+fn spawn_local_float_max_s_float_mid(c: &mut Criterion) {
+    bench(sp::spawn_local, work::float_max, Some(work::float_mid), "spawn_local_float_max_s_float_mid", c)
+}
+
 fn spawn_current_float_max(c: &mut Criterion) {
     bench(sp::spawn_current, work::float_max, None, "spawn_current_float_max", c)
 }
@@ -65,14 +72,26 @@ fn spawn_current_int_max(c: &mut Criterion) {
     bench(sp::spawn_current, work::int_max, None, "spawn_current_int_max", c)
 }
 
+fn spawn_current_int_max_s_int_mid(c: &mut Criterion) {
+    bench(sp::spawn_current, work::int_max, Some(work::int_mid), "spawn_current_int_max_s_int_mid", c)
+}
+
+fn spawn_current_int_max_s_int_min(c: &mut Criterion) {
+    bench(sp::spawn_current, work::int_max, Some(work::int_min), "spawn_current_int_max_s_int_min", c)
+}
+
 criterion_group!(
     benches,
     spawn_current,
     spawn_local,
     spawn_local_float_max,
     spawn_local_int_max,
+    spawn_local_float_max_s_float_mid,
+    spawn_local_float_max_s_float_min,
     spawn_current_float_max,
     spawn_current_int_max,
+    spawn_current_int_max_s_int_mid,
+    spawn_current_int_max_s_int_min,
 );
 
 criterion_main!(benches);
