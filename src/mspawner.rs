@@ -3,10 +3,10 @@ use std::sync::{mpsc, Arc};
 
 use tokiobench::params;
 use tokiobench::params::metrics as m;
+use tokiobench::path::metrics as mpath;
 use tokiobench::rt;
 use tokiobench::spawner;
 use tokiobench::watcher;
-use tokiobench::path::metrics as mpath;
 
 fn run_iter(
     count_down: usize,

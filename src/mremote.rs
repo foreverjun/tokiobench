@@ -1,18 +1,20 @@
-
-
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{mpsc, Arc};
 
 use tokiobench::params;
 use tokiobench::params::metrics as m;
+use tokiobench::path::metrics as mpath;
 use tokiobench::rt;
 use tokiobench::watcher;
-use tokiobench::path::metrics as mpath;
 
 type Handles = Vec<tokio::task::JoinHandle<()>>;
 
-fn run_iter(nspawn: usize, nworkers: usize, handles: &mut Handles) -> Vec<tokio_metrics::RuntimeMetrics> {
+fn run_iter(
+    nspawn: usize,
+    nworkers: usize,
+    handles: &mut Handles,
+) -> Vec<tokio_metrics::RuntimeMetrics> {
     let rt = rt::new(nworkers);
 
     let (m_tx, m_rx) = mpsc::sync_channel(m::CHAN_SIZE);
