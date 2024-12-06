@@ -1,6 +1,6 @@
 pub mod metrics {
+    use std::fs::{self, File};
     use std::io::Write;
-    use std::fs::{File, self};
     use std::path::{Path, PathBuf};
 
     fn path() -> PathBuf {
