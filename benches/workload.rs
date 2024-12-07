@@ -3,218 +3,111 @@ use itertools::iproduct;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 
-use tokiobench::params;
+use tokiobench::params as p;
 use tokiobench::rt;
-use tokiobench::work;
-use tokiobench::{split, split::SplitType};
+use tokiobench::work as w;
 
-type CallBack = fn() -> ();
+fn nspawn() -> Vec<usize> {
+    const BOUND: usize = 10;
+    const MULTIPLYER: usize = 1000;
 
-fn workload(st: SplitType, nsplits: &[usize], name: &str, work: CallBack, c: &mut Criterion) {
-    let mut group = c.benchmark_group(name);
+    (1..BOUND + 1).map(|i| i * MULTIPLYER).collect()
+}
 
-    for (nworkers, &nsplit) in iproduct!(params::NS_WORKERS, nsplits) {
-        let nspawn = params::N_SPAWN_GLOBAL;
-        let workload = split::split(st, nspawn, nsplit);
-        let rt = rt::new(nworkers);
+fn nspawner() -> Vec<usize> {
+    const BOUND: usize = 20;
 
-        group.throughput(Throughput::Elements(nspawn as u64));
-        group.bench_function(
-            format!("nspawn({nspawn})/nwork({nworkers})/nsplit({nsplit}, {st})"),
-            |b| {
-                // lift this TODO()
-                let workload_and_buffers = workload
-                    .iter()
-                    .map(|&n| Vec::with_capacity(n))
-                    .collect::<Vec<_>>();
-                b.iter_reuse(
-                    (Vec::with_capacity(workload.len()), workload_and_buffers),
-                    |(mut root_handles, mut leaf_handles)| {
-                        cfg_if!(if #[cfg(feature = "check")] {
-                            assert!(root_handles.is_empty());
-                            assert!(root_handles.capacity() == workload.len());
+    (1..BOUND + 1).collect()
+}
 
-                            assert!(leaf_handles.iter().all(|i| i.is_empty()));
-                            assert_eq!(leaf_handles.iter().map(|i| i.capacity()).sum::<usize>(), nspawn);
-                        });
+const YIELD_COUNT: usize = 10;
 
-                        rt.block_on(async {
-                            for mut leaf_handle in leaf_handles.drain(..) {
-                                root_handles.push(tokio::spawn(async move {
-                                    for _ in 0..leaf_handle.capacity() {
-                                        leaf_handle.push(tokio::spawn(async move {
-                                            work();
-                                        }));
-                                    }
+fn workload(name: &str, work: w::Work, c: &mut Criterion) {
+    let mut group = c.benchmark_group(format!("workload/{name}"));
+    for (nspawn, nspawner) in iproduct!(nspawn(), nspawner()) {
+        let rt = rt::new(p::N_WORKERS);
 
-                                    leaf_handle
-                                }));
-                            }
+        group.throughput(Throughput::Elements((nspawner * nspawn) as u64));
+        group.bench_function(format!("nspawn({nspawn})/nspawner({nspawner})"), |b| {
+            // lift this TODO()
+            let leaf_handles = (0..nspawner)
+                .map(|_| Vec::with_capacity(nspawn))
+                .collect::<Vec<_>>();
+            b.iter_reuse(
+                (Vec::with_capacity(nspawner), leaf_handles),
+                |(mut root_handles, mut leaf_handles)| {
+                    cfg_if!(if #[cfg(feature = "check")] {
+                        assert!(root_handles.is_empty());
+                        assert!(root_handles.capacity() == nspawner);
 
-                            for leaf_handle in root_handles.drain(..) {
-                                let mut leaf_handle = leaf_handle.await.unwrap();
+                        assert!(leaf_handles.iter().all(|i| i.is_empty()));
+                        assert!(leaf_handles.iter().all(|i| i.capacity() == nspawn));
+                    });
 
-                                for handle in leaf_handle.drain(..) {
-                                    handle.await.unwrap();
+                    rt.block_on(async {
+                        for mut leaf_handle in leaf_handles.drain(..) {
+                            root_handles.push(tokio::spawn(async move {
+                                for _ in 0..leaf_handle.capacity() {
+                                    leaf_handle.push(tokio::spawn(async move {
+                                        for _ in 0..YIELD_COUNT {
+                                            cfg_if!(if #[cfg(feature = "yield")] {
+                                                tokio::task::yield_now().await;
+                                            });
+                                            std::hint::black_box(work());
+                                        }
+                                    }));
                                 }
 
-                                leaf_handles.push(leaf_handle);
+                                leaf_handle
+                            }));
+                        }
+
+                        for leaf_handle in root_handles.drain(..) {
+                            let mut leaf_handle = leaf_handle.await.unwrap();
+
+                            for handle in leaf_handle.drain(..) {
+                                handle.await.unwrap();
                             }
-                        });
 
-                        (root_handles, leaf_handles)
-                    },
-                );
-            },
-        );
+                            leaf_handles.push(leaf_handle);
+                        }
+                    });
+
+                    (root_handles, leaf_handles)
+                },
+            );
+        });
     }
+    group.finish();
 }
 
-// Uniform local split
-
-fn spawn_workload_uniform_local(c: &mut Criterion) {
-    workload(
-        SplitType::Uniform,
-        &params::NS_SPLIT_LOCAL,
-        "workload_local",
-        work::nothing,
-        c,
-    );
+fn bench_float_fst(c: &mut Criterion) {
+    workload("float_fst", w::float_fst, c)
 }
 
-fn spawn_workload_uniform_local_float(c: &mut Criterion) {
-    workload(
-        SplitType::Uniform,
-        &params::NS_SPLIT_LOCAL,
-        "workload_local",
-        work::float_max,
-        c,
-    );
+fn bench_float_snd(c: &mut Criterion) {
+    workload("float_snd", w::float_snd, c)
 }
 
-fn spawn_workload_uniform_local_int(c: &mut Criterion) {
-    workload(
-        SplitType::Uniform,
-        &params::NS_SPLIT_LOCAL,
-        "workload_local",
-        work::int_max,
-        c,
-    );
+fn bench_float_thd(c: &mut Criterion) {
+    workload("float_thd", w::float_thd, c)
 }
 
-// Uniform global split
-
-fn spawn_workload_uniform_global(c: &mut Criterion) {
-    workload(
-        SplitType::Uniform,
-        &params::NS_SPLIT_GLOBAL,
-        "workload_global",
-        work::nothing,
-        c,
-    );
+fn bench_float_fth(c: &mut Criterion) {
+    workload("float_fth", w::float_fth, c)
 }
 
-fn spawn_workload_uniform_global_float(c: &mut Criterion) {
-    workload(
-        SplitType::Uniform,
-        &params::NS_SPLIT_GLOBAL,
-        "workload_global",
-        work::float_max,
-        c,
-    );
-}
-
-fn spawn_workload_uniform_global_int(c: &mut Criterion) {
-    workload(
-        SplitType::Uniform,
-        &params::NS_SPLIT_GLOBAL,
-        "workload_global",
-        work::int_max,
-        c,
-    );
-}
-
-// Geometric local
-
-fn spawn_workload_geometric_local(c: &mut Criterion) {
-    workload(
-        SplitType::Geometric,
-        &params::NS_SPLIT_LOCAL,
-        "workload_local",
-        work::nothing,
-        c,
-    );
-}
-
-fn spawn_workload_geometric_local_float(c: &mut Criterion) {
-    workload(
-        SplitType::Geometric,
-        &params::NS_SPLIT_LOCAL,
-        "workload_local",
-        work::float_max,
-        c,
-    );
-}
-
-fn spawn_workload_geometric_local_int(c: &mut Criterion) {
-    workload(
-        SplitType::Geometric,
-        &params::NS_SPLIT_LOCAL,
-        "workload_local",
-        work::int_max,
-        c,
-    );
-}
-
-// Geometric global
-
-fn spawn_workload_geometric_global(c: &mut Criterion) {
-    workload(
-        SplitType::Geometric,
-        &params::NS_SPLIT_GLOBAL,
-        "workload_global",
-        work::nothing,
-        c,
-    );
-}
-
-fn spawn_workload_geometric_global_float(c: &mut Criterion) {
-    workload(
-        SplitType::Geometric,
-        &params::NS_SPLIT_GLOBAL,
-        "workload_global",
-        work::float_max,
-        c,
-    );
-}
-
-fn spawn_workload_geometric_global_int(c: &mut Criterion) {
-    workload(
-        SplitType::Geometric,
-        &params::NS_SPLIT_GLOBAL,
-        "workload_global",
-        work::int_max,
-        c,
-    );
+fn bench_float_fft(c: &mut Criterion) {
+    workload("float_fft", w::float_fft, c)
 }
 
 criterion_group!(
-    spawn_benches,
-    // work: nothing
-    spawn_workload_uniform_local,
-    spawn_workload_uniform_global,
-    spawn_workload_geometric_local,
-    spawn_workload_geometric_global,
-    // work: float max
-    spawn_workload_uniform_local_float,
-    spawn_workload_uniform_global_float,
-    spawn_workload_geometric_local_float,
-    spawn_workload_geometric_global_float,
-    // work: int max
-    spawn_workload_uniform_local_int,
-    spawn_workload_uniform_global_int,
-    spawn_workload_geometric_local_int,
-    spawn_workload_geometric_global_int,
+    benches,
+    bench_float_fst,
+    bench_float_snd,
+    bench_float_thd,
+    bench_float_fth,
+    bench_float_fft,
 );
 
-criterion_main!(spawn_benches);
+criterion_main!(benches);
