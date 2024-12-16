@@ -21,15 +21,15 @@ name = "mremote"
 path = "src/mremote.rs"
 
 [[bench]]
-name = "work"
-harness = false
-
-[[bench]]
 name = "workload"
 harness = false
 
 [[bench]]
-name = "aworkload"
+name = "remote"
+harness = false
+
+[[bench]]
+name = "spawner"
 harness = false
 
 [features]

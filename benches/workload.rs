@@ -9,7 +9,7 @@ use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use tokiobench::params as p;
 use tokiobench::rt;
 
-fn workload(name: &str, nspawn: &[usize], nspawner: &[usize], c: &mut Criterion) {
+fn bench(name: &str, nspawn: &[usize], nspawner: &[usize], c: &mut Criterion) {
     let (tx, rx) = mpsc::sync_channel(1);
     let mut group = c.benchmark_group(format!("workload/{name}"));
 
@@ -75,21 +75,21 @@ fn bench_thousand(c: &mut Criterion) {
     let nspawn: Vec<usize> = (1..10 + 1).map(|i| i * 1000).collect();
     let nspawner: Vec<usize> = (1..20 + 1).collect();
 
-    workload("thousand", nspawn.as_ref(), nspawner.as_ref(), c)
+    bench("thousand", nspawn.as_ref(), nspawner.as_ref(), c)
 }
 
 fn bench_hundred(c: &mut Criterion) {
     let nspawn: Vec<usize> = (1..10 + 1).map(|i| i * 100).collect();
     let nspawner: Vec<usize> = (1..20 + 1).collect();
 
-    workload("hundred", nspawn.as_ref(), nspawner.as_ref(), c)
+    bench("hundred", nspawn.as_ref(), nspawner.as_ref(), c)
 }
 
 criterion_group!(
     name = benches;
     config = Criterion::default()
         .sample_size(200)
-        .measurement_time(Duration::from_secs(300))
+        .measurement_time(Duration::from_secs(60))
         .warm_up_time(Duration::from_secs(60));
 
     targets = bench_hundred, bench_thousand
