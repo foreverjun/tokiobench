@@ -20,6 +20,10 @@ path = "src/lib.rs"
 name = "mremote"
 path = "src/mremote.rs"
 
+[[bin]]
+name = "mworkload"
+path = "src/mworkload.rs"
+
 [[bench]]
 name = "workload"
 harness = false
