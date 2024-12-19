@@ -112,9 +112,9 @@ fn main() -> () {
 
     // collect metrics for hundreds thousands tasks
     let nspawn: Vec<usize> = (1..=6).map(|i| i * 100_000).collect();
-    run_metrics("workload_hthousands", &nspawn, &nspawner, 20);
+    run_metrics("workload_hthousands", &nspawn, &nspawner, 15);
 
     // collect metrics for millions tasks
     let nspawn: Vec<usize> = (1..=3).map(|i| i * 1_000_000).collect();
-    run_metrics("workload_millions", &nspawn, &nspawner, 150);
+    run_metrics("workload_millions", &nspawn, &nspawner, 50);
 }

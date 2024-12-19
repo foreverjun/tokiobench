@@ -25,6 +25,10 @@ path = "src/mremote.rs"
 name = "mworkload"
 path = "src/mworkload.rs"
 
+[[bin]]
+name = "mspawner"
+path = "src/mspawner.rs"
+
 [[bench]]
 name = "workload"
 harness = false

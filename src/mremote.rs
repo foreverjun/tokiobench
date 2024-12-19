@@ -2,7 +2,6 @@ use itertools::{iproduct, Itertools};
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{mpsc, Arc};
-use tokiobench::params;
 use tokiobench::params::metrics as m;
 use tokiobench::path::metrics as mpath;
 use tokiobench::rt;
@@ -73,9 +72,9 @@ fn main() -> () {
 
     // collect metrics for hundreds thousands tasks
     let nspawn: Vec<usize> = (1..=6).map(|i| i * 100_000).collect();
-    run_metrics("remote_hthousands", &nspawn, &nwork,20);
+    run_metrics("remote_hthousands", &nspawn, &nwork,5);
 
     // collect metrics for millions tasks
     let nspawn: Vec<usize> = (1..=3).map(|i| i * 1_000_000).collect();
-    run_metrics("remote_millions", &nspawn, &nwork,150);
+    run_metrics("remote_millions", &nspawn, &nwork,20);
 }
