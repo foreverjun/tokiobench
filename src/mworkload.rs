@@ -1,5 +1,5 @@
 use cfg_if::cfg_if;
-use itertools::iproduct;
+use itertools::{iproduct, Itertools};
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{mpsc, Arc};
@@ -8,7 +8,9 @@ use tokio_metrics::RuntimeMetrics;
 use tokiobench::params as p;
 use tokiobench::params::metrics as m;
 use tokiobench::path::metrics as mpath;
+use tokiobench::path::metrics::store;
 use tokiobench::rt;
+use tokiobench::serializer::MetricsSerializable;
 use tokiobench::watcher;
 
 type Handles = Vec<JoinHandle<()>>;
@@ -76,38 +78,39 @@ fn run_iter(
 
     assert!(root_handles.is_empty());
 
-    (root_handles, leaf_handles , m_rx.into_iter().collect::<Vec<_>>())
+    (root_handles, leaf_handles , m_rx.into_iter().collect_vec())
 }
 
 
 fn run_metrics(name: &str, nspawn: &[usize], nspawner: &[usize], sample_slice:u64) {
     for (&nspawn, &nspawner) in iproduct!(nspawn, nspawner) {
-        let name = format!("{name}/nspawn({nspawn})_nspawner({nspawner})");
         let prefix = mpath::mk_prefix(&name);
+        let name = format!("nspawn({nspawn})_nspawner({nspawner})");
         let mut leaf_handles = (0..nspawner)
             .map(|_| Vec::with_capacity(nspawn))
             .collect::<Vec<_>>();
         let mut root_handles = Vec::with_capacity(nspawner);
+        let mut metrics = Vec::new();
 
         for niter in 0..m::N_ITER {
             let output = run_iter(nspawn, nspawner, root_handles, leaf_handles, sample_slice);
             root_handles = output.0;
             leaf_handles = output.1;
-            let metrics_u8 = serde_json::to_vec_pretty(&output.2).unwrap();
+            let m = output.2;
+            m.iter().for_each(|m| { metrics.push(MetricsSerializable::new(niter, m)) });
 
-            let name = format!("iter_{niter}.json");
-            mpath::store(&prefix, &name, &metrics_u8);
         }
+        store(&prefix, &name, &metrics);
     }
 }
 
 fn main() -> () {
-    let nspawn: Vec<usize> = (1..=15).map(|i| i * 1000).collect();
+    let nspawn: Vec<usize> = (1..=12).map(|i| i * 1000).collect();
     let nspawner: Vec<usize> = (1..=20).collect();
     run_metrics("thousands", &nspawn, &nspawner, 1);
-    let nspawn: Vec<usize> = (1..=10).map(|i| i * 100_000).collect();
-    run_metrics("hthousands", &nspawn, &nspawner, 10);
-    let nspawn: Vec<usize> = (1..=10).map(|i| i * 1_000_000).collect();
-    run_metrics("millions", &nspawn, &nspawner, 50);
+    let nspawn: Vec<usize> = (1..=6).map(|i| i * 100_000).collect();
+    run_metrics("hthousands", &nspawn, &nspawner, 20);
+    let nspawn: Vec<usize> = (1..=3).map(|i| i * 1_000_000).collect();
+    run_metrics("millions", &nspawn, &nspawner, 150);
 
 }
