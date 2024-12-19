@@ -107,10 +107,10 @@ fn run_metrics(name: &str, nspawn: &[usize], nspawner: &[usize], sample_slice:u6
 fn main() -> () {
     let nspawn: Vec<usize> = (1..=12).map(|i| i * 1000).collect();
     let nspawner: Vec<usize> = (1..=20).collect();
-    run_metrics("thousands", &nspawn, &nspawner, 1);
+    run_metrics("workload_thousands", &nspawn, &nspawner, 1);
     let nspawn: Vec<usize> = (1..=6).map(|i| i * 100_000).collect();
-    run_metrics("hthousands", &nspawn, &nspawner, 20);
+    run_metrics("workload_hthousands", &nspawn, &nspawner, 20);
     let nspawn: Vec<usize> = (1..=3).map(|i| i * 1_000_000).collect();
-    run_metrics("millions", &nspawn, &nspawner, 150);
+    run_metrics("workload_millions", &nspawn, &nspawner, 150);
 
 }

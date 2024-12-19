@@ -1,11 +1,12 @@
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{mpsc, Arc};
-
+use itertools::Itertools;
 use tokiobench::params;
 use tokiobench::params::metrics as m;
 use tokiobench::path::metrics as mpath;
 use tokiobench::rt;
+use tokiobench::serializer::MetricsSerializable;
 use tokiobench::watcher;
 
 type Handles = Vec<tokio::task::JoinHandle<()>>;
@@ -45,25 +46,24 @@ fn run_iter(
 
     assert!(handles.is_empty());
 
-    return m_rx.into_iter().collect::<Vec<_>>();
+    m_rx.into_iter().collect_vec()
 }
 
 fn run_metrics(name: &str, nspawn: usize, nworkers: usize) {
-    let name = format!("{}_nwork({})", name, nworkers);
     let prefix = mpath::mk_prefix(&name);
+    let name = format!("{}_nwork({})", name, nworkers);
     let mut handles: Handles = Vec::with_capacity(nspawn);
+    let mut metrics = Vec::new();
 
     for niter in 0..m::N_ITER {
-        let metrics = run_iter(nspawn, nworkers, &mut handles);
-        let metrics_u8 = serde_json::to_vec_pretty(&metrics).unwrap();
-
-        let name = format!("iter_{niter}.json");
-        mpath::store(&prefix, &name, &metrics_u8);
+        let m = run_iter(nspawn, nworkers, &mut handles);
+        m.iter().for_each(|m| {metrics.push(MetricsSerializable::new(niter, &m))});
     }
+    mpath::store(&prefix, &name, &metrics);
 }
 
 fn main() -> () {
     for nwork in params::NS_WORKERS {
-        run_metrics("remote", 10000000, nwork);
+        run_metrics("remote", 10_000_000, nwork);
     }
 }
