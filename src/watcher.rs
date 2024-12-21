@@ -2,10 +2,8 @@ use std::thread;
 
 use std::time::Duration;
 
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::Relaxed;
-use std::sync::{mpsc::SyncSender, Arc};
-
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc::SyncSender;
 use tokio_metrics::RuntimeMonitor;
 
 use crate::params::metrics as m;
@@ -14,7 +12,7 @@ pub type MetricSyncSender = SyncSender<tokio_metrics::RuntimeMetrics>;
 
 pub fn run(
     metric_tx: MetricSyncSender,
-    rem: Arc<AtomicUsize>,
+    mut stop_rx: Receiver<bool>,
     rt_monitor: RuntimeMonitor,
     sample_slice: u64
 ) -> std::thread::JoinHandle<()> {
@@ -28,9 +26,7 @@ pub fn run(
             }
             metric_tx.send(interval).unwrap();
 
-            if rem.load(Relaxed) == 0 {
-                break;
-            }
+            if stop_rx.try_recv().is_ok() { break; }
 
             thread::sleep(Duration::from_millis(sample_slice));
         }

@@ -1,6 +1,4 @@
-use std::sync::atomic::AtomicUsize;
-use std::sync::{mpsc, Arc};
-use std::sync::atomic::Ordering::Relaxed;
+use std::sync::mpsc;
 use itertools::{iproduct, Itertools};
 use tokio::task::JoinHandle;
 use tokio_metrics::MetricsSerializable;
@@ -19,15 +17,14 @@ fn run_iter(
     let rt = rt::new(nworkers);
 
     let (m_tx, m_rx) = mpsc::sync_channel(m::CHAN_SIZE);
-    let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(1));
+    let (stop_tx, stop_rx) = mpsc::sync_channel(1);
     let (tx, rx) = mpsc::sync_channel(1);
 
     let metrics_handler = {
-        let rem = Arc::clone(&rem);
         let handle = rt.handle();
         let rt_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
 
-        watcher::run(m_tx, rem, rt_monitor, sample_slice)
+        watcher::run(m_tx, stop_rx, rt_monitor, sample_slice)
     };
 
     let _guard = rt.enter();
@@ -47,7 +44,7 @@ fn run_iter(
     handles = rx.recv().unwrap();
     assert!(handles.is_empty());
 
-    rem.fetch_sub(1, Relaxed);
+    stop_tx.send(true).unwrap();
     metrics_handler.join().unwrap();
 
     (handles, m_rx.into_iter().collect_vec())

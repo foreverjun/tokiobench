@@ -1,8 +1,6 @@
 use cfg_if::cfg_if;
 use itertools::{iproduct, Itertools};
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::Relaxed;
-use std::sync::{mpsc, Arc};
+use std::sync::mpsc;
 use tokio::task::JoinHandle;
 use tokio_metrics::{MetricsSerializable, RuntimeMetrics};
 use tokiobench::params as p;
@@ -24,7 +22,7 @@ fn run_iter(
     let rt = rt::new(p::N_WORKERS);
     let (tx, rx) = mpsc::sync_channel(1);
     let (m_tx, m_rx) = mpsc::sync_channel(m::CHAN_SIZE);
-    let rem: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(1));
+    let (stop_tx, stop_rx) = mpsc::sync_channel(1);
 
     cfg_if!(if #[cfg(feature = "check")] {
                         assert!(root_handles.is_empty());
@@ -35,11 +33,10 @@ fn run_iter(
                     });
 
     let metrics_handler = {
-        let rem = Arc::clone(&rem);
         let handle = rt.handle();
         let rt_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
 
-        watcher::run(m_tx, rem, rt_monitor, sample_size)
+        watcher::run(m_tx, stop_rx, rt_monitor, sample_size)
     };
 
 
@@ -72,7 +69,7 @@ fn run_iter(
 
     (leaf_handles, root_handles) = rx.recv().unwrap();
 
-    rem.fetch_sub(1, Relaxed);
+    stop_tx.send(true).unwrap();
     metrics_handler.join().unwrap();
 
     assert!(root_handles.is_empty());
