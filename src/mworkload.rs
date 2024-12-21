@@ -4,13 +4,12 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{mpsc, Arc};
 use tokio::task::JoinHandle;
-use tokio_metrics::RuntimeMetrics;
+use tokio_metrics::{MetricsSerializable, RuntimeMetrics};
 use tokiobench::params as p;
 use tokiobench::params::metrics as m;
 use tokiobench::path::metrics as mpath;
 use tokiobench::path::metrics::store;
 use tokiobench::rt;
-use tokiobench::serializer::MetricsSerializable;
 use tokiobench::watcher;
 
 type Handles = Vec<JoinHandle<()>>;

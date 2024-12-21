@@ -1,9 +1,8 @@
 pub mod metrics {
     use std::fs::{self};
-    use std::io::Write;
     use std::path::{Path, PathBuf};
     use csv::Writer;
-    use crate::serializer::MetricsSerializable;
+    use tokio_metrics::MetricsSerializable;
 
     fn path() -> PathBuf {
         let mut path = std::env::current_dir().unwrap();

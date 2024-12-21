@@ -3,10 +3,10 @@ use std::sync::{mpsc, Arc};
 use std::sync::atomic::Ordering::Relaxed;
 use itertools::{iproduct, Itertools};
 use tokio::task::JoinHandle;
+use tokio_metrics::MetricsSerializable;
 use tokiobench::params::metrics as m;
 use tokiobench::path::metrics as mpath;
 use tokiobench::rt;
-use tokiobench::serializer::MetricsSerializable;
 use tokiobench::watcher;
 
 type Handles = Vec<JoinHandle<()>>;
