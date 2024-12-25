@@ -3,11 +3,11 @@ use std::sync::mpsc;
 use itertools::iproduct;
 use std::time::Duration;
 
+use tokiobench::bench::tatlin;
 use tokiobench::metrics;
 use tokiobench::params::metrics as m;
 use tokiobench::path::metrics as mpath;
 use tokiobench::rt;
-use tokiobench::tatlin;
 use tokiobench::watcher;
 
 const NUM_THREADS: usize = 12;

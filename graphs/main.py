@@ -22,19 +22,26 @@ if __name__ == "__main__":
         description='Draw cringe graphs for my diploma',
         epilog="Duty dies last")
 
-    parser.add_argument("-p", "--profile", default="default")
-    parser.add_argument("-c", "--criterion", default=p.CRITERION_PATH)
-    parser.add_argument("-r", "--result", default=p.PLOTS_PATH)
+    parser.add_argument("-c", "--criterion_path", default=p.CRITERION_PATH)
+    parser.add_argument("-r", "--result_path", default=p.PLOTS_PATH)
+    parser.add_argument("-b", "--bench", action="store_true", default=False)
 
+    parser.add_argument("-mp", "--metrics_path", default=p.METRICS_PATH)
+    parser.add_argument("-m", "--metrics", action="store_true", default=False)
     args = parser.parse_args()
 
-    p.PLOTS_PATH = lpath.Path(args.result)
-    p.CRITERION_PATH = lpath.Path(args.criterion)
+    p.PLOTS_PATH = lpath.Path(args.result_path)
+    p.CRITERION_PATH = lpath.Path(args.criterion_path)
+    p.METRICS_PATH = lpath.Path(args.metrics_path)
 
-    lpath.Path(args.result).mkdir(mode=0o777, parents=True, exist_ok=True)
+    lpath.Path(p.PLOTS_PATH).mkdir(mode=0o777, parents=True, exist_ok=True)
 
     plt.figure(figsize=(10,10))
 
-    import scatter
+    if args.bench:
+        import scatter
+        scatter.run()
 
-    scatter.run()
+    if args.metrics:
+        import metrics
+        metrics.run()

@@ -19,19 +19,19 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "mtatlin"
-path = "src/mtatlin.rs"
+path = "src/monitor/mtatlin.rs"
 
 [[bin]]
 name = "mremote"
-path = "src/mremote.rs"
+path = "src/monitor/mremote.rs"
 
 [[bin]]
 name = "mworkload"
-path = "src/mworkload.rs"
+path = "src/monitor/mworkload.rs"
 
 [[bin]]
 name = "mspawner"
-path = "src/mspawner.rs"
+path = "src/monitor/mspawner.rs"
 
 [[bench]]
 name = "workload"

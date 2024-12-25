@@ -6,13 +6,13 @@ use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use itertools::iproduct;
-use tokiobench::tatlin;
+use tokiobench::bench::tatlin;
 
 use tokiobench::rt;
 
 const NUM_THREADS: usize = 12;
 
-fn ch(name: &str, nspawn: &[usize], nspawner: &[usize], c: &mut Criterion) {
+fn _ch(name: &str, nspawn: &[usize], nspawner: &[usize], c: &mut Criterion) {
     let (tx, rx) = mpsc::sync_channel(1);
     let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
@@ -34,7 +34,7 @@ fn ch(name: &str, nspawn: &[usize], nspawner: &[usize], c: &mut Criterion) {
     group.finish();
 }
 
-fn spin(name: &str, nspawn: &[usize], nspawner: &[usize], c: &mut Criterion) {
+fn _spin(name: &str, nspawn: &[usize], nspawner: &[usize], c: &mut Criterion) {
     let end = Arc::new(AtomicBool::new(false));
     let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
@@ -89,21 +89,21 @@ fn for_ch(name: &str, nspawn: &[usize], nspawner: &[usize], c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_ch(c: &mut Criterion) {
+fn _bench_ch(c: &mut Criterion) {
     let nspawn: Vec<usize> = (1..=10).map(|i| i * 1000).collect();
     let nspawner: Vec<usize> = (1..=20).collect();
 
-    ch("ch", nspawn.as_ref(), nspawner.as_ref(), c)
+    _ch("ch", nspawn.as_ref(), nspawner.as_ref(), c)
 }
 
-fn bench_spin(c: &mut Criterion) {
+fn _bench_spin(c: &mut Criterion) {
     let nspawn: Vec<usize> = (1..=10).map(|i| i * 1000).collect();
     let nspawner: Vec<usize> = (1..=20).collect();
 
-    spin("spin", nspawn.as_ref(), nspawner.as_ref(), c)
+    _spin("spin", nspawn.as_ref(), nspawner.as_ref(), c)
 }
 
-fn bench_for_ch(c: &mut Criterion) {
+fn _bench_for_ch(c: &mut Criterion) {
     let nspawn: Vec<usize> = (1..=10).map(|i| i * 1000).collect();
     let nspawner: Vec<usize> = (1..=20).collect();
 
@@ -117,7 +117,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(10))
         .warm_up_time(Duration::from_secs(3));
 
-    targets = bench_for_ch
+    targets = _bench_for_ch
 );
 
 criterion_main!(benches);

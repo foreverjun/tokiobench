@@ -88,7 +88,6 @@ def process_df(df, plot_dir):
     print("finished")
 
 def run():
-
     spawner_pattern = re.compile(r"sampling\((.*?)\)_nspawn\((\d+)\)_nworkers\((\d+)\)")
     workload_pattern = re.compile(r"sampling\((.*?)\)_nspawn\((\d+)\)_nspawner\((\d+)\)")
     sns.set_theme()

@@ -1,4 +1,3 @@
-use cfg_if::cfg_if;
 use itertools::iproduct;
 
 use std::sync::mpsc;
@@ -6,6 +5,8 @@ use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use tokiobench::rt;
+
+use tokiobench::bench::remote;
 
 fn bench(name: &str, nspawn: &[usize], nworker: &[usize], c: &mut Criterion) {
     let (tx, rx) = mpsc::sync_channel(1);
@@ -17,26 +18,11 @@ fn bench(name: &str, nspawn: &[usize], nworker: &[usize], c: &mut Criterion) {
         group.throughput(Throughput::Elements(nspawn as u64));
         group.bench_function(format!("nspawn({nspawn})/nworker({nworker})"), |b| {
             let handles = Vec::with_capacity(nspawn);
-            b.iter_reuse(handles, |mut handles| {
-                cfg_if!(if #[cfg(feature = "check")] {
-                    assert!(handles.is_empty());
-                    assert!(handles.capacity() == nspawn);
-                });
-
+            b.iter_reuse(handles, |handles| {
                 let tx = tx.clone();
                 let _guard = rt.enter();
 
-                for _ in 0..nspawn {
-                    handles.push(tokio::spawn(async { std::hint::black_box(()) }));
-                }
-
-                tokio::spawn(async move {
-                    for handle in handles.drain(..) {
-                        handle.await.unwrap();
-                    }
-
-                    tx.send(handles).unwrap();
-                });
+                remote::for_ch(nspawn, handles, tx);
 
                 rx.recv().unwrap()
             });

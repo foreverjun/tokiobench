@@ -78,9 +78,7 @@ pub fn total(rt: tokio::runtime::Runtime) -> TotalMetrics {
         worker_total_busy_duration: (0..workers)
             .map(|i| m.worker_total_busy_duration(i).as_nanos())
             .sum(),
-        worker_local_schedule_count: (0..workers)
-            .map(|i| m.worker_local_schedule_count(i))
-            .sum(),
+        worker_local_schedule_count: (0..workers).map(|i| m.worker_local_schedule_count(i)).sum(),
         worker_overflow_count: (0..workers).map(|i| m.worker_overflow_count(i)).sum(),
     }
 }
