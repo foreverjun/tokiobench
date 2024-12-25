@@ -9,11 +9,7 @@ use futures::prelude::*;
 use tokio::task::JoinHandle;
 
 async fn task() {
-    for _ in 0..10 {
-        std::hint::black_box(());
-        tokio::task::yield_now().await;
-        std::hint::black_box(());
-    }
+    std::hint::black_box(());
 }
 
 async fn spawn_tasks(n: usize) {
