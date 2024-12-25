@@ -17,15 +17,13 @@ pub fn run(
     slice: Duration,
     mut result: Vec<metrics::RuntimeMetrics>,
 ) -> std::thread::JoinHandle<Vec<metrics::RuntimeMetrics>> {
-    let thread_handle = thread::spawn(move || {
-        let mut metrics_count = 0;
+    assert!(result.is_empty());
 
+    thread::spawn(move || {
         for interval in rt_monitor.intervals() {
-            metrics_count += 1;
-            if metrics_count >= result.capacity() {
+            if result.len() == result.capacity() {
                 panic!("metrics overflow");
             }
-            // rewrite to vector
             result.push(metrics::from_tokio_metrics(interval));
 
             if stop_rx.try_recv().is_ok() {
@@ -36,7 +34,5 @@ pub fn run(
         }
 
         result
-    });
-
-    thread_handle
+    })
 }
