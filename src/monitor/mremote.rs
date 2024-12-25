@@ -1,87 +1,65 @@
-use itertools::iproduct;
 use std::sync::mpsc;
 use std::time::Duration;
-use tokiobench::metrics::RuntimeMetrics;
+
+use tokio_metrics as tms;
+use tokiobench::bench::remote;
 use tokiobench::params::metrics as m;
 use tokiobench::path::metrics as mpath;
-use tokiobench::path::metrics::store_vec;
 use tokiobench::rt;
 use tokiobench::watcher;
 
-type Handles = Vec<tokio::task::JoinHandle<()>>;
+const NUM_WARMUP: usize = 5;
 
-fn run_iter(
-    nspawn: usize,
-    nworkers: usize,
-    handles: &mut Handles,
-    sample_slice: Duration,
-    mut metrics: Vec<RuntimeMetrics>,
-) -> Vec<RuntimeMetrics> {
-    let rt = rt::new(nworkers);
-    let (stop_tx, stop_rx) = mpsc::sync_channel(1);
+fn run_sampling(name: &str, nspawn: usize, nworker: usize) {
+    let mut handles = Vec::with_capacity(nspawn);
+    let mut metrics_results = Vec::with_capacity(m::CHAN_SIZE);
 
-    let metrics_handler = {
-        let handle = rt.handle();
-        let rt_monitor = tokio_metrics::RuntimeMonitor::new(&handle);
-        watcher::run(rt_monitor, stop_rx, sample_slice, metrics)
-    };
+    let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
-    for _ in 0..nspawn {
-        handles.push(rt.spawn(async move {
-            std::hint::black_box(());
-        }));
-    }
+    for niter in 0..m::N_ITER {
+        metrics_results = {
+            let (m_stop_tx, m_stop_rx) = mpsc::sync_channel(1);
 
-    rt.block_on(async {
-        for handle in handles.drain(..) {
-            handle.await.unwrap();
-        }
-    });
+            // create rutime, enter runtime context
+            let rt = rt::new(nworker);
+            let _guard = rt.enter();
 
-    stop_tx.send(()).unwrap();
-    metrics = metrics_handler.join().unwrap();
-    assert!(handles.is_empty());
-    metrics
-}
+            // warmup iterations
+            for _ in 0..NUM_WARMUP {
+                let rt_tx = rt_tx.clone();
+                remote::for_ch(nspawn, handles, rt_tx);
+                (handles) = rt_rx.recv().unwrap();
+            }
 
-fn run_metrics(name: &str, nspawn: &[usize], nworkers: &[usize], sample_slice: Duration) {
-    for (&nspawn, &nworkers) in iproduct!(nspawn, nworkers) {
-        let mut handles: Handles = Vec::with_capacity(nspawn);
-        let mut metrics = Vec::with_capacity(m::CHAN_SIZE);
+            {
+                let metrics_handler = watcher::run(
+                    tms::RuntimeMonitor::new(rt.handle()),
+                    m_stop_rx,
+                    Duration::from_millis(100),
+                    metrics_results,
+                );
 
-        for niter in 0..m::N_ITER {
-            metrics = run_iter(nspawn, nworkers, &mut handles, sample_slice, metrics);
-            let prefix = mpath::mk_prefix(&format!(
-                "sampling({name})_nspawn({nspawn})_nworkers({nworkers})"
-            ));
-            let name = &format!("iter({niter}).csv");
-            store_vec(&prefix, &name, &metrics);
-            metrics.clear()
-        }
+                let rt_tx = rt_tx.clone();
+                remote::for_ch(nspawn, handles, rt_tx);
+                (handles) = rt_rx.recv().unwrap();
+
+                m_stop_tx.send(()).unwrap();
+                metrics_handler.join().unwrap()
+            }
+        };
+
+        let prefix = mpath::mk_prefix(&format!(
+            "sampling({name})_nspawn({nspawn})_nworker({nworker})"
+        ));
+        mpath::store_vec(&prefix, &format!("iter({niter}).csv"), &metrics_results);
+        metrics_results.clear()
     }
 }
 
 fn main() -> () {
-    // collect metrics for thousands tasks
-    let nspawn: Vec<usize> = (1..=12).map(|i| i * 1000).collect();
-    let nwork: Vec<usize> = (1..=20).collect();
-    run_metrics(
-        "remote_thousands",
-        &nspawn,
-        &nwork,
-        Duration::from_micros(200),
-    );
+    const NSPAWN: usize = 1000_000;
 
-    // collect metrics for hundreds thousands tasks
-    let nspawn: Vec<usize> = (1..=6).map(|i| i * 100_000).collect();
-    run_metrics(
-        "remote_hthousands",
-        &nspawn,
-        &nwork,
-        Duration::from_micros(600),
-    );
-
-    // collect metrics for millions tasks
-    let nspawn: Vec<usize> = (1..=3).map(|i| i * 1_000_000).collect();
-    run_metrics("remote_millions", &nspawn, &nwork, Duration::from_millis(5));
+    for nworker in 2..24 {
+        run_sampling("million", NSPAWN, nworker);
+    }
 }

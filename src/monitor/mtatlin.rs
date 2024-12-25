@@ -35,7 +35,6 @@ fn run_sampling(name: &str, nspawn: usize, nspawner: usize) {
             for _ in 0..NUM_WARMUP {
                 let rt_tx = rt_tx.clone();
                 tatlin::for_await_ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
-
                 (root_handles, leaf_handles) = rt_rx.recv().unwrap();
             }
 
@@ -65,7 +64,7 @@ fn run_sampling(name: &str, nspawn: usize, nspawner: usize) {
     }
 }
 
-fn run_total(name: &str, nspawn: usize, nspawner: usize) {
+fn _run_total(name: &str, nspawn: usize, nspawner: usize) {
     let mut leaf_handles = (0..nspawner)
         .map(|_| Vec::with_capacity(nspawn))
         .collect::<Vec<_>>();
@@ -94,9 +93,5 @@ fn run_total(name: &str, nspawn: usize, nspawner: usize) {
 fn main() -> () {
     for (nspawn, nspawner) in iproduct!(5000..=5000, 1..10) {
         run_sampling("tatlin", nspawn, nspawner);
-    }
-
-    for (nspawn, nspawner) in iproduct!(5000..=5000, 1..10) {
-        run_total("tatlin", nspawn, nspawner);
     }
 }

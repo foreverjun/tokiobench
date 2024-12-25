@@ -31,11 +31,12 @@ fn bench(name: &str, nspawn: &[usize], nworker: &[usize], c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_fst(c: &mut Criterion) {
-    let nspawn: Vec<usize> = (1..=10).map(|i| i * 1000_000).collect();
-    let nworker: Vec<usize> = (2..=20).collect();
+fn bench_const(c: &mut Criterion) {
+    const NSPAWN: usize = 1000_000;
 
-    bench("thousand", nspawn.as_ref(), nworker.as_ref(), c)
+    let nworker: Vec<usize> = (2..=24).collect();
+
+    bench("million", &[NSPAWN], nworker.as_ref(), c)
 }
 
 criterion_group!(
@@ -45,7 +46,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(10))
         .warm_up_time(Duration::from_secs(10));
 
-    targets = bench_fst
+    targets = bench_const
 );
 
 criterion_main!(benches);
