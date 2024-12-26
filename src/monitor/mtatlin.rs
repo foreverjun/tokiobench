@@ -12,7 +12,7 @@ use tokiobench::rt;
 use tokiobench::watcher;
 
 const NUM_THREADS: usize = 12;
-const NUM_WARMUP: usize = 5;
+const NUM_WARMUP: usize = 30;
 
 fn run_sampling(name: &str, nspawn: usize, nspawner: usize) {
     let mut leaf_handles = (0..nspawner)
