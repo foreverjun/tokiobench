@@ -35,7 +35,7 @@ fn run_sampling(name: &str, nspawn: usize, nworker: usize) {
                 let metrics_handler = watcher::run(
                     tms::RuntimeMonitor::new(rt.handle()),
                     m_stop_rx,
-                    Duration::from_millis(100),
+                    Duration::from_nanos(500),
                     metrics_results,
                 );
 

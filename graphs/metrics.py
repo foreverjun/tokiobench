@@ -88,11 +88,11 @@ def process_df(df, plot_dir):
     print("finished")
 
 def run():
-    spawner_pattern = re.compile(r"sampling\((.*?)\)_nspawn\((\d+)\)_nworkers\((\d+)\)")
+    spawner_pattern = re.compile(r"sampling\((.*?)\)_nspawn\((\d+)\)_nworker\((\d+)\)")
     workload_pattern = re.compile(r"sampling\((.*?)\)_nspawn\((\d+)\)_nspawner\((\d+)\)")
     sns.set_theme()
     for bname in NAMES:
-        print(bname)
+        print(bname.name)
         match = spawner_pattern.match(bname.name)
         if not match:
             match = workload_pattern.match(bname.name)

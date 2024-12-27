@@ -2,6 +2,8 @@ use cfg_if::cfg_if;
 
 use std::sync::mpsc::SyncSender;
 
+use futures::future;
+
 use tokio::task::JoinHandle;
 
 pub type Ch = fn(usize, Vec<JoinHandle<()>>, SyncSender<Vec<JoinHandle<()>>>) -> ();
@@ -31,5 +33,17 @@ pub fn for_ch(
         }
 
         tx.send(handles).unwrap();
+    });
+}
+
+pub fn join_all(nspawn: usize, tx: SyncSender<()>) {
+    let handles = (0..nspawn)
+        .into_iter()
+        .map(|_| tokio::spawn(async { std::hint::black_box(()) }));
+
+    tokio::spawn(async move {
+        future::join_all(handles).await;
+
+        tx.send(()).unwrap();
     });
 }
