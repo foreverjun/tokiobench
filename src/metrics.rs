@@ -54,14 +54,15 @@ pub fn from_tokio_metrics(m: tokio_metrics::RuntimeMetrics) -> RuntimeMetrics {
 
 #[derive(Serialize)]
 pub struct TotalMetrics {
+    pub workers_count: usize,
     pub spawned_tasks_count: u64,
     pub remote_schedule_count: u64,
-    pub worker_steal_count: u64,
-    pub worker_steal_operations: u64,
-    pub worker_poll_count: u64,
-    pub worker_total_busy_duration: u128,
-    pub worker_local_schedule_count: u64,
-    pub worker_overflow_count: u64,
+    pub worker_steal_count: Vec<u64>,
+    pub worker_steal_operations: Vec<u64>,
+    pub worker_poll_count: Vec<u64>,
+    pub worker_total_busy_duration: Vec<u128>,
+    pub worker_local_schedule_count: Vec<u64>,
+    pub worker_overflow_count: Vec<u64>,
 }
 
 pub fn total(rt: tokio::runtime::Runtime) -> TotalMetrics {
@@ -70,15 +71,18 @@ pub fn total(rt: tokio::runtime::Runtime) -> TotalMetrics {
     let workers = m.num_workers();
 
     TotalMetrics {
+        workers_count: workers,
         spawned_tasks_count: m.spawned_tasks_count(),
         remote_schedule_count: m.remote_schedule_count(),
-        worker_steal_count: (0..workers).map(|i| m.worker_steal_count(i)).sum(),
-        worker_steal_operations: (0..workers).map(|i| m.worker_steal_operations(i)).sum(),
-        worker_poll_count: (0..workers).map(|i| m.worker_poll_count(i)).sum(),
+        worker_steal_count: (0..workers).map(|i| m.worker_steal_count(i)).collect(),
+        worker_steal_operations: (0..workers).map(|i| m.worker_steal_operations(i)).collect(),
+        worker_poll_count: (0..workers).map(|i| m.worker_poll_count(i)).collect(),
         worker_total_busy_duration: (0..workers)
             .map(|i| m.worker_total_busy_duration(i).as_nanos())
-            .sum(),
-        worker_local_schedule_count: (0..workers).map(|i| m.worker_local_schedule_count(i)).sum(),
-        worker_overflow_count: (0..workers).map(|i| m.worker_overflow_count(i)).sum(),
+            .collect(),
+        worker_local_schedule_count: (0..workers)
+            .map(|i| m.worker_local_schedule_count(i))
+            .collect(),
+        worker_overflow_count: (0..workers).map(|i| m.worker_overflow_count(i)).collect(),
     }
 }

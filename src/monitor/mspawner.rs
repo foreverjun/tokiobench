@@ -51,7 +51,7 @@ fn run_sampling(name: &str, nspawn: usize, nworker: usize) {
         let prefix = mpath::mk_prefix(&format!(
             "sampling({name})_nspawn({nspawn})_nworker({nworker})"
         ));
-        mpath::store_vec(&prefix, &format!("iter({niter}).csv"), &metrics_results);
+        mpath::store_csv(&prefix, &format!("iter({niter}).csv"), &metrics_results);
         metrics_results.clear()
     }
 

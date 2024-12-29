@@ -59,19 +59,19 @@ fn run_sampling(name: &str, nspawn: usize, nspawner: usize) {
         let prefix = mpath::mk_prefix(&format!(
             "sampling({name})_nspawn({nspawn})_nspawner({nspawner})"
         ));
-        mpath::store_vec(&prefix, &format!("iter({niter}).csv"), &metrics_results);
+        mpath::store_csv(&prefix, &format!("iter({niter})"), &metrics_results);
         metrics_results.clear()
     }
 }
 
-fn _run_total(name: &str, nspawn: usize, nspawner: usize) {
+fn run_total(name: &str, nspawn: usize, nspawner: usize) {
     let mut leaf_handles = (0..nspawner)
         .map(|_| Vec::with_capacity(nspawn))
         .collect::<Vec<_>>();
     let mut root_handles = Vec::with_capacity(nspawner);
     let rt = rt::new(NUM_THREADS);
 
-    for _ in 0..m::N_ITER {
+    for _ in 0..100 {
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
         {
@@ -87,11 +87,12 @@ fn _run_total(name: &str, nspawn: usize, nspawner: usize) {
         "total({})_nspawn({})_nspawner({})",
         name, nspawn, nspawner
     ));
-    mpath::store_vec(&prefix, "total.csv", &[metrics]);
+    mpath::store_json(&prefix, "total", &[metrics]);
 }
 
 fn main() -> () {
     for (nspawn, nspawner) in iproduct!(5000..=5000, 1..10) {
         run_sampling("tatlin", nspawn, nspawner);
+        run_total("tatlin", nspawn, nspawner);
     }
 }

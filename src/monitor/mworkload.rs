@@ -7,7 +7,6 @@ use tokiobench::metrics::RuntimeMetrics;
 use tokiobench::params as p;
 use tokiobench::params::metrics as m;
 use tokiobench::path::metrics as mpath;
-use tokiobench::path::metrics::store_vec;
 use tokiobench::rt;
 use tokiobench::watcher;
 
@@ -101,7 +100,7 @@ fn run_metrics(name: &str, nspawn: &[usize], nspawner: &[usize], sample_slice: D
                 "sampling({name})_nspawn({nspawn})_nspawner({nspawner})"
             ));
             let name = &format!("iter({niter}).csv");
-            store_vec(&prefix, &name, &reuse.metrics);
+            mpath::store_csv(&prefix, &name, &reuse.metrics);
             reuse.metrics.clear()
         }
     }
