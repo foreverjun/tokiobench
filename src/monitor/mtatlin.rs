@@ -11,7 +11,7 @@ use tokiobench::path::metrics as mpath;
 use tokiobench::rt;
 use tokiobench::watcher;
 
-const NUM_THREADS: usize = 12;
+const NUM_THREADS: usize = 24;
 const NUM_WARMUP: usize = 30;
 
 fn run_sampling(name: &str, nspawn: usize, nspawner: usize) {
@@ -64,30 +64,42 @@ fn run_sampling(name: &str, nspawn: usize, nspawner: usize) {
     }
 }
 
+const TOTAL_ITERS: usize = 100;
+
 fn run_total(name: &str, nspawn: usize, nspawner: usize) {
     let mut leaf_handles = (0..nspawner)
         .map(|_| Vec::with_capacity(nspawn))
         .collect::<Vec<_>>();
     let mut root_handles = Vec::with_capacity(nspawner);
-    let rt = rt::new(NUM_THREADS);
 
-    for _ in 0..100 {
+    // warmup
+    for _ in 0..NUM_WARMUP {
+        let rt = rt::new(NUM_THREADS);
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
-        {
+        let _guard = rt.enter();
+        tatlin::for_await_ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
+        (root_handles, leaf_handles) = rt_rx.recv().unwrap();
+    }
+
+    // execution
+    let metrics = {
+        let rt = rt::new(NUM_THREADS);
+
+        for _ in 0..TOTAL_ITERS {
+            let (rt_tx, rt_rx) = mpsc::sync_channel(1);
             let _guard = rt.enter();
             tatlin::for_await_ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
             (root_handles, leaf_handles) = rt_rx.recv().unwrap();
         }
-    }
 
-    let metrics = metrics::total(rt);
+        metrics::total(rt)
+    };
 
     let prefix = mpath::mk_prefix(&format!(
-        "total({})_nspawn({})_nspawner({})",
-        name, nspawn, nspawner
+        "total({name})_nspawn({nspawn})_nspawner({nspawner})"
     ));
-    mpath::store_json(&prefix, "total", &[metrics]);
+    mpath::store_json(&prefix, "total", &metrics);
 }
 
 fn main() -> () {

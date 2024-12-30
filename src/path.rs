@@ -39,7 +39,7 @@ pub mod metrics {
         wrt.flush().unwrap();
     }
 
-    pub fn store_json(prefix: &Path, name: &str, metrics: &[impl Serialize]) {
+    pub fn store_json(prefix: &Path, name: &str, metrics: &impl Serialize) {
         let result_path = {
             let mut prefix = PathBuf::from(prefix);
             prefix.push(format!("{name}.json"));

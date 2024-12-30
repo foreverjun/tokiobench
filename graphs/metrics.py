@@ -1,8 +1,9 @@
-import os
 import pathlib as lpath
 import re
 import sys
+import json
 
+import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 
 import params as p
 
-NAMES = [f for f in os.scandir(p.METRICS_PATH) if f.is_dir()]
+NAMES = [f for f in p.METRICS_PATH.glob("*") if f.is_dir()]
 
 
 # https://github.com/mwaskom/seaborn/issues/552#issuecomment-1668374877
@@ -87,7 +88,7 @@ def process_df(df, plot_dir):
     lowess_plot(df, labels, plot_dir)
     print("finished")
 
-def run():
+def run_sampling():
     spawner_pattern = re.compile(r"sampling\((.*?)\)_nspawn\((\d+)\)_nworker\((\d+)\)")
     workload_pattern = re.compile(r"sampling\((.*?)\)_nspawn\((\d+)\)_nspawner\((\d+)\)")
     sns.set_theme()
@@ -109,6 +110,108 @@ def run():
         df = merge_iters(bname)
         process_df(df, plot_dir)
 
-if __name__=="__main__":
-    run()
+class Json:
+    pass
+
+class NSpawner:
+    pass
+
+def read_total(base_dir: lpath.Path) -> Json:
+    for path in base_dir.glob("*"):
+        file_name = path.name
+
+        if file_name != "total.json":
+            continue
+
+        return json.load(path.open())
+
+def plot_histogram(data: list[int], name: str, plot_path: lpath.Path) -> None:
+    print("data", data)
+
+    pass
+
+# metrics per worker
+def plot_total(json_data: Json, plot_dir: lpath.Path) -> None:
+    metrics = ["worker_local_schedule_count", "worker_steal_operations", "worker_overflow_count"]
+    lable   = ["local shedule", "steal operations", "overflow count"]
+
+    fig, axs = plt.subplots(1, len(metrics))
+    for ind, metric in enumerate(metrics):
+        ax = axs[ind]
+
+        y_points = json_data[metric]
+        x_points = list(range(1, len(y_points) + 1))
+
+        assert(len(y_points) == len(x_points))
+
+        ax.stem(x_points, y_points)
+
+        ax.set_xlabel("nworker value")
+        ax.set_title(lable[ind])
+
+    print("total saved in:", plot_dir)
+    fig.savefig(plot_dir / "total")
+
+# oveall metrics
+def plot_sum_total(json_data: list[NSpawner, Json], plot_dir: lpath.Path) -> None:
+    metrics = ["worker_local_schedule_count", "worker_steal_operations", "worker_overflow_count"]
+    lable   = ["local shedule", "steal operations", "overflow count"]
+
+    fig, axs = plt.subplots(1, len(metrics))
+
+    json_data = sorted(json_data, key=lambda t: t[0])
+
+    nspawn = list(map(lambda t: t[0], json_data))
+    json_data = list(map(lambda t: t[1], json_data))
+
+    for ind, metric in enumerate(metrics):
+        ax = axs[ind]
+
+        y_points = list(map(lambda j: sum(j[metric]), json_data))
+        x_points = nspawn
+
+        ax.stem(x_points, y_points)
+
+        ax.set_xlabel("nspawn value")
+        ax.set_title(lable[ind])
+
+    print("total_sum saved in in:", plot_dir)
+    fig.savefig(plot_dir / "total_sum")
+
+def run_total():
+    pattern = re.compile(r"total\((.*?)\)_nspawn\((\d+)\)_nspawner\((\d+)\)")
+    sns.set_theme()
+
+    nspawner_data: list[int, Json] = []
+
+    for bname in NAMES:
+        print("processing:", bname.name)
+
+        match = pattern.match(bname.name)
+        if not match or not bname.is_dir():
+            continue
+
+        print("matched:", bname.name)
+
+        total_name = match.group(1)
+        nspawn = match.group(2)
+        nspawner = match.group(3)
+
+        bdir = p.RESULT_PATH / total_name
+        bdir.mkdir(mode=0o777, parents=True, exist_ok=True)
+
+        plot_dir = bdir / f"npawn({nspawn})nspawner({nspawner})"
+        plot_dir.mkdir(mode=0o777, parents=True, exist_ok=True)
+
+        json_data = read_total(bname)
+        plot_total(json_data, plot_dir)
+
+        nspawner_data.append((nspawner, json_data))
+
+    plot_sum_total(nspawner_data, p.RESULT_PATH)
+
+if __name__== "__main__":
+    run_sampling()
+    run_total()
+
 

@@ -2,12 +2,20 @@
 bench:
 	python3 .benchpy/bench.py
 
-.PHONY: clean
-clean:
+.PHONY: cleanall
+cleanall:
 	cargo clean
 
 	cd tokio; cargo clean
 	cd tokio-metrics; cargo clean
+
+.PHONY: cleanmetrics
+cleanmetrics:
+	rm -rf target/metrics
+
+.PHONY: cleancriterion
+cleancriterion:
+	rm -rf target/criterion
 
 .PHONY: plot
 plot:
