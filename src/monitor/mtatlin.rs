@@ -11,10 +11,9 @@ use tokiobench::path::metrics as mpath;
 use tokiobench::rt;
 use tokiobench::watcher;
 
-const NUM_THREADS: usize = 24;
 const NUM_WARMUP: usize = 30;
 
-fn run_sampling(name: &str, nspawn: usize, nspawner: usize) {
+fn run_sampling(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
     let mut leaf_handles = (0..nspawner)
         .map(|_| Vec::with_capacity(nspawn))
         .collect::<Vec<_>>();
@@ -28,7 +27,7 @@ fn run_sampling(name: &str, nspawn: usize, nspawner: usize) {
             let (m_stop_tx, m_stop_rx) = mpsc::sync_channel(1);
 
             // create rutime, enter runtime context
-            let rt = rt::new(NUM_THREADS);
+            let rt = rt::new(nworker);
             let _guard = rt.enter();
 
             // warmup iterations
@@ -66,7 +65,7 @@ fn run_sampling(name: &str, nspawn: usize, nspawner: usize) {
 
 const TOTAL_ITERS: usize = 100;
 
-fn run_total(name: &str, nspawn: usize, nspawner: usize) {
+fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
     let mut leaf_handles = (0..nspawner)
         .map(|_| Vec::with_capacity(nspawn))
         .collect::<Vec<_>>();
@@ -74,7 +73,7 @@ fn run_total(name: &str, nspawn: usize, nspawner: usize) {
 
     // warmup
     for _ in 0..NUM_WARMUP {
-        let rt = rt::new(NUM_THREADS);
+        let rt = rt::new(nworker);
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
         let _guard = rt.enter();
@@ -84,7 +83,7 @@ fn run_total(name: &str, nspawn: usize, nspawner: usize) {
 
     // execution
     let metrics = {
-        let rt = rt::new(NUM_THREADS);
+        let rt = rt::new(nworker);
 
         for _ in 0..TOTAL_ITERS {
             let (rt_tx, rt_rx) = mpsc::sync_channel(1);
@@ -103,8 +102,10 @@ fn run_total(name: &str, nspawn: usize, nspawner: usize) {
 }
 
 fn main() -> () {
-    for (nspawn, nspawner) in iproduct!(5000..=5000, 1..20) {
-        run_sampling("tatlin", nspawn, nspawner);
-        run_total("tatlin", nspawn, nspawner);
+    let nworker = vec![1, 2, 4, 8, 12, 14, 16, 24];
+
+    for (nworker, nspawn, nspawner) in iproduct!(nworker, 5000..=5000, 1..20) {
+        run_sampling("tatlin", nworker, nspawn, nspawner);
+        run_total("tatlin", nworker, nspawn, nspawner);
     }
 }

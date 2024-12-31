@@ -16,13 +16,11 @@ pub mod join_all {
     use super::*;
 
     async fn spawn_tasks(n: usize) {
-        // assume compiler reduce allocation TODO()
         future::join_all((0..n).into_iter().map(|_| tokio::spawn(task()))).await;
     }
 
     pub fn tx(nspawner: usize, nspawn: usize, tx: SyncSender<()>) {
         tokio::spawn(async move {
-            // assume compiler reduce allocation TODO()
             future::join_all(
                 (0..nspawner)
                     .into_iter()
@@ -36,7 +34,6 @@ pub mod join_all {
 
     pub fn spin(nspawner: usize, nspawn: usize, end: Arc<AtomicBool>) {
         tokio::spawn(async move {
-            // assume compiler reduce allocation TODO()
             future::join_all(
                 (0..nspawner)
                     .into_iter()
@@ -48,8 +45,6 @@ pub mod join_all {
         });
     }
 }
-
-// TODO (duplication, types etc)
 
 pub mod vec {
     use super::*;
@@ -72,7 +67,7 @@ pub mod vec {
         let _: LeafFn = spawn_tasks;
     }
 
-    pub fn spawn_tasks(mut handles: Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>> {
+    fn spawn_tasks(mut handles: Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>> {
         for _ in 0..handles.capacity() {
             handles.push(tokio::spawn(task()))
         }
@@ -118,22 +113,11 @@ pub mod vec {
         });
     }
 
-    pub mod lifo {
+    pub mod blocking {
         use super::*;
 
         fn _static_assert() {
             let _: Fn = ch;
-            let _: LeafFn = spawn_tasks;
-        }
-
-        fn spawn_tasks(mut handles: Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>> {
-            tokio::spawn(async {});
-
-            for _ in 0..handles.capacity() {
-                handles.push(tokio::spawn(task()))
-            }
-
-            handles
         }
 
         // TODO duplication. but no call by refernce
@@ -157,7 +141,7 @@ pub mod vec {
 
             tokio::spawn(async move {
                 for leaf_handle in leaf_handles.drain(..) {
-                    root_handles.push(tokio::spawn(async { spawn_tasks(leaf_handle) }));
+                    root_handles.push(tokio::task::spawn_blocking(|| spawn_tasks(leaf_handle)));
                 }
 
                 for leaf_handle in root_handles.drain(..) {

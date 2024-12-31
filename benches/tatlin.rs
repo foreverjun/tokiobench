@@ -125,7 +125,7 @@ pub mod builder {
             group.finish();
         }
 
-        mod lifo {
+        pub mod blocking {
             use super::*;
 
             pub fn ch(
@@ -156,7 +156,57 @@ pub mod builder {
                                     let tx = tx.clone();
 
                                     let _gurad = rt.enter();
-                                    tatlin::vec::lifo::ch(
+                                    tatlin::vec::blocking::ch(
+                                        nspawner,
+                                        nspawn,
+                                        tx,
+                                        root_handles,
+                                        leaf_handles,
+                                    );
+
+                                    rx.recv().unwrap()
+                                },
+                            );
+                        },
+                    );
+                }
+                group.finish();
+            }
+        }
+
+        // TODO (duplication (but no curring!!!))
+        pub mod no_lifo {
+            use super::*;
+
+            pub fn ch(
+                name: &str,
+                nspawn: &[usize],
+                nspawner: &[usize],
+                nworker: &[usize],
+                c: &mut Criterion,
+            ) {
+                let (tx, rx) = mpsc::sync_channel(1);
+                let mut group = c.benchmark_group(format!("tatlin/{name}"));
+
+                for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
+                    let rt = rt::new_no_lifo(nworker);
+
+                    group.throughput(Throughput::Elements(nspawn as u64));
+                    group.bench_function(
+                        format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
+                        |b| {
+                            let leaf_handles = (0..nspawner)
+                                .map(|_| Vec::with_capacity(nspawn))
+                                .collect::<Vec<_>>();
+                            let root_handles = Vec::with_capacity(nspawner);
+
+                            b.iter_reuse(
+                                (root_handles, leaf_handles),
+                                |(root_handles, leaf_handles)| {
+                                    let tx = tx.clone();
+
+                                    let _gurad = rt.enter();
+                                    tatlin::vec::blocking::ch(
                                         nspawner,
                                         nspawn,
                                         tx,
@@ -230,18 +280,6 @@ mod bench {
         fn nspawner() -> Vec<usize> {
             (1..=20).collect()
         }
-
-        pub mod join_all {
-            use super::*;
-
-            pub fn ch(c: &mut Criterion) {
-                builder::join_all::ch("line/join_all/ch", &nspawn(), &nspawner(), &nworker(), c)
-            }
-
-            pub fn spin(c: &mut Criterion) {
-                builder::join_all::ch("line/join_all/spin", &nspawn(), &nspawner(), &nworker(), c)
-            }
-        }
         pub mod vec {
             use super::*;
 
@@ -249,11 +287,31 @@ mod bench {
                 builder::vec::ch("line/vec/ch", &nspawn(), &nspawner(), &nworker(), c)
             }
 
-            pub mod lifo {
+            pub mod no_lifo {
                 use super::*;
 
                 pub fn ch(c: &mut Criterion) {
-                    builder::join_all::ch("line/vec/lifo/ch", &nspawn(), &nspawner(), &nworker(), c)
+                    builder::vec::no_lifo::ch(
+                        "line/vec/no_lifo/ch",
+                        &nspawn(),
+                        &nspawner(),
+                        &nworker(),
+                        c,
+                    )
+                }
+            }
+
+            pub mod blocking {
+                use super::*;
+
+                pub fn ch(c: &mut Criterion) {
+                    builder::vec::blocking::ch(
+                        "line/vec/blocking/ch",
+                        &nspawn(),
+                        &nspawner(),
+                        &nworker(),
+                        c,
+                    )
                 }
             }
         }
@@ -263,11 +321,11 @@ mod bench {
 criterion_group!(
     name = benches;
     config = Criterion::default()
-        .sample_size(300)
-        .measurement_time(Duration::from_secs(30))
+        .sample_size(200)
+        .measurement_time(Duration::from_secs(40))
         .warm_up_time(Duration::from_secs(3));
 
-    targets = bench::line::vec::ch, bench::line::vec::lifo::ch
+    targets = bench::line::vec::blocking::ch
 );
 
 criterion_main!(benches);
