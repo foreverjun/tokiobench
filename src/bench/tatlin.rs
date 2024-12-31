@@ -12,82 +12,166 @@ async fn task() {
     std::hint::black_box(());
 }
 
-async fn spawn_tasks(n: usize) {
-    // assume compiler reduce allocation TODO()
-    future::join_all((0..n).into_iter().map(|_| tokio::spawn(task()))).await;
-}
+pub mod join_all {
+    use super::*;
 
-pub fn tx(nspawner: usize, nspawn: usize, tx: SyncSender<()>) {
-    tokio::spawn(async move {
+    async fn spawn_tasks(n: usize) {
         // assume compiler reduce allocation TODO()
-        future::join_all(
-            (0..nspawner)
-                .into_iter()
-                .map(|_| tokio::spawn(spawn_tasks(nspawn))),
-        )
-        .await;
-
-        tx.send(()).unwrap();
-    });
-}
-
-pub fn spin(nspawner: usize, nspawn: usize, end: Arc<AtomicBool>) {
-    tokio::spawn(async move {
-        // assume compiler reduce allocation TODO()
-        future::join_all(
-            (0..nspawner)
-                .into_iter()
-                .map(|_| tokio::spawn(spawn_tasks(nspawn))),
-        )
-        .await;
-
-        end.store(true, Release);
-    });
-}
-
-async fn spawn_tasks_vec(mut handles: Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>> {
-    for _ in 0..handles.capacity() {
-        handles.push(tokio::spawn(task()))
+        future::join_all((0..n).into_iter().map(|_| tokio::spawn(task()))).await;
     }
 
-    handles
+    pub fn tx(nspawner: usize, nspawn: usize, tx: SyncSender<()>) {
+        tokio::spawn(async move {
+            // assume compiler reduce allocation TODO()
+            future::join_all(
+                (0..nspawner)
+                    .into_iter()
+                    .map(|_| tokio::spawn(spawn_tasks(nspawn))),
+            )
+            .await;
+
+            tx.send(()).unwrap();
+        });
+    }
+
+    pub fn spin(nspawner: usize, nspawn: usize, end: Arc<AtomicBool>) {
+        tokio::spawn(async move {
+            // assume compiler reduce allocation TODO()
+            future::join_all(
+                (0..nspawner)
+                    .into_iter()
+                    .map(|_| tokio::spawn(spawn_tasks(nspawn))),
+            )
+            .await;
+
+            end.store(true, Release);
+        });
+    }
 }
 
 // TODO (duplication, types etc)
-pub fn for_await_ch(
-    _nspawner: usize,
-    _nspawn: usize,
-    tx: SyncSender<(
+
+pub mod vec {
+    use super::*;
+
+    pub type Fn = fn(
+        usize,
+        usize,
+        SyncSender<(
+            Vec<JoinHandle<Vec<JoinHandle<()>>>>,
+            Vec<Vec<JoinHandle<()>>>,
+        )>,
         Vec<JoinHandle<Vec<JoinHandle<()>>>>,
         Vec<Vec<JoinHandle<()>>>,
-    )>,
-    mut root_handles: Vec<JoinHandle<Vec<JoinHandle<()>>>>,
-    mut leaf_handles: Vec<Vec<JoinHandle<()>>>,
-) {
-    cfg_if!(if #[cfg(feature = "check")] {
-        assert!(root_handles.is_empty());
-        assert!(root_handles.capacity() == _nspawner);
+    ) -> ();
 
-        assert!(leaf_handles.iter().all(|i| i.is_empty() && i.capacity() == _nspawn));
-        assert!(leaf_handles.len() == _nspawner);
-    });
+    pub type LeafFn = fn(Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>>;
 
-    tokio::spawn(async move {
-        // assume compiler reduce allocation TODO()
-        for leaf_handle in leaf_handles.drain(..) {
-            root_handles.push(tokio::spawn(spawn_tasks_vec(leaf_handle)));
+    fn _static_assert() {
+        let _: Fn = ch;
+        let _: LeafFn = spawn_tasks;
+    }
+
+    pub fn spawn_tasks(mut handles: Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>> {
+        for _ in 0..handles.capacity() {
+            handles.push(tokio::spawn(task()))
         }
 
-        for leaf_handle in root_handles.drain(..) {
-            let mut leaf_handle = leaf_handle.await.unwrap();
+        handles
+    }
 
-            for leaf in leaf_handle.drain(..) {
-                leaf.await.unwrap();
+    // TODO duplication. but no call by refernce
+    pub fn ch(
+        _nspawner: usize,
+        _nspawn: usize,
+        tx: SyncSender<(
+            Vec<JoinHandle<Vec<JoinHandle<()>>>>,
+            Vec<Vec<JoinHandle<()>>>,
+        )>,
+        mut root_handles: Vec<JoinHandle<Vec<JoinHandle<()>>>>,
+        mut leaf_handles: Vec<Vec<JoinHandle<()>>>,
+    ) {
+        cfg_if!(if #[cfg(feature = "check")] {
+            assert!(root_handles.is_empty());
+            assert!(root_handles.capacity() == _nspawner);
+
+            assert!(leaf_handles.iter().all(|i| i.is_empty() && i.capacity() == _nspawn));
+            assert!(leaf_handles.len() == _nspawner);
+        });
+
+        tokio::spawn(async move {
+            for leaf_handle in leaf_handles.drain(..) {
+                root_handles.push(tokio::spawn(async move { spawn_tasks(leaf_handle) }));
             }
 
-            leaf_handles.push(leaf_handle)
+            for leaf_handle in root_handles.drain(..) {
+                let mut leaf_handle = leaf_handle.await.unwrap();
+
+                for leaf in leaf_handle.drain(..) {
+                    leaf.await.unwrap();
+                }
+
+                leaf_handles.push(leaf_handle)
+            }
+
+            tx.send((root_handles, leaf_handles)).unwrap()
+        });
+    }
+
+    pub mod lifo {
+        use super::*;
+
+        fn _static_assert() {
+            let _: Fn = ch;
+            let _: LeafFn = spawn_tasks;
         }
 
-        tx.send((root_handles, leaf_handles)).unwrap()
-    });
+        fn spawn_tasks(mut handles: Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>> {
+            tokio::spawn(async {});
+
+            for _ in 0..handles.capacity() {
+                handles.push(tokio::spawn(task()))
+            }
+
+            handles
+        }
+
+        // TODO duplication. but no call by refernce
+        pub fn ch(
+            _nspawner: usize,
+            _nspawn: usize,
+            tx: SyncSender<(
+                Vec<JoinHandle<Vec<JoinHandle<()>>>>,
+                Vec<Vec<JoinHandle<()>>>,
+            )>,
+            mut root_handles: Vec<JoinHandle<Vec<JoinHandle<()>>>>,
+            mut leaf_handles: Vec<Vec<JoinHandle<()>>>,
+        ) {
+            cfg_if!(if #[cfg(feature = "check")] {
+                assert!(root_handles.is_empty());
+                assert!(root_handles.capacity() == _nspawner);
+
+                assert!(leaf_handles.iter().all(|i| i.is_empty() && i.capacity() == _nspawn));
+                assert!(leaf_handles.len() == _nspawner);
+            });
+
+            tokio::spawn(async move {
+                for leaf_handle in leaf_handles.drain(..) {
+                    root_handles.push(tokio::spawn(async { spawn_tasks(leaf_handle) }));
+                }
+
+                for leaf_handle in root_handles.drain(..) {
+                    let mut leaf_handle = leaf_handle.await.unwrap();
+
+                    for leaf in leaf_handle.drain(..) {
+                        leaf.await.unwrap();
+                    }
+
+                    leaf_handles.push(leaf_handle)
+                }
+
+                tx.send((root_handles, leaf_handles)).unwrap()
+            });
+        }
+    }
 }

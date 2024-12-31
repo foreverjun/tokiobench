@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering::{Acquire, Relaxed};
 use std::sync::mpsc;
@@ -10,113 +12,252 @@ use tokiobench::bench::tatlin;
 
 use tokiobench::rt;
 
-fn _ch(name: &str, nspawn: &[usize], nspawner: &[usize], nworker: &[usize], c: &mut Criterion) {
-    let (tx, rx) = mpsc::sync_channel(1);
-    let mut group = c.benchmark_group(format!("tatlin/{name}"));
+pub mod builder {
+    use super::*;
 
-    for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-        let rt = rt::new(nworker);
+    pub mod join_all {
+        use super::*;
 
-        group.throughput(Throughput::Elements(nspawn as u64));
-        group.bench_function(
-            format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
-            |b| {
-                b.iter(|| {
-                    let tx = tx.clone();
+        pub fn ch(
+            name: &str,
+            nspawn: &[usize],
+            nspawner: &[usize],
+            nworker: &[usize],
+            c: &mut Criterion,
+        ) {
+            let (tx, rx) = mpsc::sync_channel(1);
+            let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
-                    let _gurad = rt.enter();
-                    tatlin::tx(nspawner, nspawn, tx);
+            for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
+                let rt = rt::new(nworker);
 
-                    rx.recv().unwrap();
-                });
-            },
-        );
-    }
-    group.finish();
-}
+                group.throughput(Throughput::Elements(nspawn as u64));
+                group.bench_function(
+                    format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
+                    |b| {
+                        b.iter(|| {
+                            let tx = tx.clone();
 
-fn _spin(name: &str, nspawn: &[usize], nspawner: &[usize], nworker: &[usize], c: &mut Criterion) {
-    let end = Arc::new(AtomicBool::new(false));
-    let mut group = c.benchmark_group(format!("tatlin/{name}"));
+                            let _gurad = rt.enter();
+                            tatlin::join_all::tx(nspawner, nspawn, tx);
 
-    for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-        let rt = rt::new(nworker);
-
-        group.throughput(Throughput::Elements(nspawn as u64));
-        group.bench_function(
-            format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
-            |b| {
-                b.iter(|| {
-                    end.store(false, Relaxed);
-
-                    let _guard = rt.enter();
-                    tatlin::spin(nspawner, nspawn, Arc::clone(&end));
-
-                    while !end.load(Acquire) {
-                        std::hint::spin_loop();
-                    }
-                });
-            },
-        );
-    }
-    group.finish();
-}
-
-fn for_ch(name: &str, nspawn: &[usize], nspawner: &[usize], nworker: &[usize], c: &mut Criterion) {
-    let (tx, rx) = mpsc::sync_channel(1);
-    let mut group = c.benchmark_group(format!("tatlin/{name}"));
-
-    for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-        let rt = rt::new(nworker);
-
-        group.throughput(Throughput::Elements(nspawn as u64));
-        group.bench_function(
-            format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
-            |b| {
-                let leaf_handles = (0..nspawner)
-                    .map(|_| Vec::with_capacity(nspawn))
-                    .collect::<Vec<_>>();
-                let root_handles = Vec::with_capacity(nspawner);
-
-                b.iter_reuse(
-                    (root_handles, leaf_handles),
-                    |(root_handles, leaf_handles)| {
-                        let tx = tx.clone();
-
-                        let _gurad = rt.enter();
-                        tatlin::for_await_ch(nspawner, nspawn, tx, root_handles, leaf_handles);
-
-                        rx.recv().unwrap()
+                            rx.recv().unwrap();
+                        });
                     },
                 );
-            },
-        );
+            }
+            group.finish();
+        }
+
+        pub fn spin(
+            name: &str,
+            nspawn: &[usize],
+            nspawner: &[usize],
+            nworker: &[usize],
+            c: &mut Criterion,
+        ) {
+            let end = Arc::new(AtomicBool::new(false));
+            let mut group = c.benchmark_group(format!("tatlin/{name}"));
+
+            for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
+                let rt = rt::new(nworker);
+
+                group.throughput(Throughput::Elements(nspawn as u64));
+                group.bench_function(
+                    format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
+                    |b| {
+                        b.iter(|| {
+                            end.store(false, Relaxed);
+
+                            let _guard = rt.enter();
+                            tatlin::join_all::spin(nspawner, nspawn, Arc::clone(&end));
+
+                            while !end.load(Acquire) {
+                                std::hint::spin_loop();
+                            }
+                        });
+                    },
+                );
+            }
+            group.finish();
+        }
     }
-    group.finish();
+
+    pub mod vec {
+        use super::*;
+
+        pub fn ch(
+            name: &str,
+            nspawn: &[usize],
+            nspawner: &[usize],
+            nworker: &[usize],
+            c: &mut Criterion,
+        ) {
+            let (tx, rx) = mpsc::sync_channel(1);
+            let mut group = c.benchmark_group(format!("tatlin/{name}"));
+
+            for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
+                let rt = rt::new(nworker);
+
+                group.throughput(Throughput::Elements(nspawn as u64));
+                group.bench_function(
+                    format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
+                    |b| {
+                        let leaf_handles = (0..nspawner)
+                            .map(|_| Vec::with_capacity(nspawn))
+                            .collect::<Vec<_>>();
+                        let root_handles = Vec::with_capacity(nspawner);
+
+                        b.iter_reuse(
+                            (root_handles, leaf_handles),
+                            |(root_handles, leaf_handles)| {
+                                let tx = tx.clone();
+
+                                let _gurad = rt.enter();
+                                tatlin::vec::ch(nspawner, nspawn, tx, root_handles, leaf_handles);
+
+                                rx.recv().unwrap()
+                            },
+                        );
+                    },
+                );
+            }
+            group.finish();
+        }
+
+        mod lifo {
+            use super::*;
+
+            pub fn ch(
+                name: &str,
+                nspawn: &[usize],
+                nspawner: &[usize],
+                nworker: &[usize],
+                c: &mut Criterion,
+            ) {
+                let (tx, rx) = mpsc::sync_channel(1);
+                let mut group = c.benchmark_group(format!("tatlin/{name}"));
+
+                for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
+                    let rt = rt::new(nworker);
+
+                    group.throughput(Throughput::Elements(nspawn as u64));
+                    group.bench_function(
+                        format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
+                        |b| {
+                            let leaf_handles = (0..nspawner)
+                                .map(|_| Vec::with_capacity(nspawn))
+                                .collect::<Vec<_>>();
+                            let root_handles = Vec::with_capacity(nspawner);
+
+                            b.iter_reuse(
+                                (root_handles, leaf_handles),
+                                |(root_handles, leaf_handles)| {
+                                    let tx = tx.clone();
+
+                                    let _gurad = rt.enter();
+                                    tatlin::vec::lifo::ch(
+                                        nspawner,
+                                        nspawn,
+                                        tx,
+                                        root_handles,
+                                        leaf_handles,
+                                    );
+
+                                    rx.recv().unwrap()
+                                },
+                            );
+                        },
+                    );
+                }
+                group.finish();
+            }
+        }
+    }
 }
 
-fn _bench_ch(c: &mut Criterion) {
-    let nspawn: Vec<usize> = (1..=10).map(|i| i * 1000).collect();
-    let nspawner: Vec<usize> = (1..=20).collect();
-    let nworker: Vec<usize> = (1..=10).map(|i| i * 2).collect();
-
-    _ch("ch", &nspawn, &nspawner, &nworker, c)
+fn nworker() -> Vec<usize> {
+    vec![1, 2, 4, 8, 12, 16, 24]
 }
 
-fn _bench_spin(c: &mut Criterion) {
-    let nspawn: Vec<usize> = (1..=10).map(|i| i * 1000).collect();
-    let nspawner: Vec<usize> = (1..=20).collect();
-    let nworker: Vec<usize> = (1..=10).map(|i| i * 2).collect();
+mod bench {
+    use super::*;
 
-    _spin("spin", &nspawn, &nspawner, &nworker, c)
-}
+    pub mod scatter {
+        use super::*;
 
-fn _bench_for_ch(c: &mut Criterion) {
-    let nspawn: Vec<usize> = (1..=10).map(|i| i * 1000).collect();
-    let nspawner: Vec<usize> = (1..=20).collect();
-    let nworker: Vec<usize> = (1..=10).map(|i| i * 2).collect();
+        fn nspawn() -> Vec<usize> {
+            (1..=10).map(|i| i * 1000).collect()
+        }
 
-    for_ch("for_ch", &nspawn, &nspawner, &nworker, c)
+        fn nspawner() -> Vec<usize> {
+            (1..=20).collect()
+        }
+
+        pub mod join_all {
+            use super::*;
+
+            pub fn ch(c: &mut Criterion) {
+                builder::join_all::ch("scatter/join_all/ch", &nspawn(), &nspawner(), &nworker(), c)
+            }
+
+            pub fn spin(c: &mut Criterion) {
+                builder::join_all::spin(
+                    "scatter/join_all/spin",
+                    &nspawn(),
+                    &nspawner(),
+                    &nworker(),
+                    c,
+                )
+            }
+        }
+        pub mod vec {
+            use super::*;
+
+            pub fn ch(c: &mut Criterion) {
+                builder::vec::ch("scatter/vec/ch", &nspawn(), &nspawner(), &nworker(), c)
+            }
+        }
+    }
+
+    pub mod line {
+        use super::*;
+
+        fn nspawn() -> Vec<usize> {
+            vec![1000, 5000, 10000]
+        }
+
+        fn nspawner() -> Vec<usize> {
+            (1..=20).collect()
+        }
+
+        pub mod join_all {
+            use super::*;
+
+            pub fn ch(c: &mut Criterion) {
+                builder::join_all::ch("line/join_all/ch", &nspawn(), &nspawner(), &nworker(), c)
+            }
+
+            pub fn spin(c: &mut Criterion) {
+                builder::join_all::ch("line/join_all/spin", &nspawn(), &nspawner(), &nworker(), c)
+            }
+        }
+        pub mod vec {
+            use super::*;
+
+            pub fn ch(c: &mut Criterion) {
+                builder::vec::ch("line/vec/ch", &nspawn(), &nspawner(), &nworker(), c)
+            }
+
+            pub mod lifo {
+                use super::*;
+
+                pub fn ch(c: &mut Criterion) {
+                    builder::join_all::ch("line/vec/lifo/ch", &nspawn(), &nspawner(), &nworker(), c)
+                }
+            }
+        }
+    }
 }
 
 criterion_group!(
@@ -126,7 +267,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(30))
         .warm_up_time(Duration::from_secs(3));
 
-    targets = _bench_for_ch, _bench_ch, _bench_spin
+    targets = bench::line::vec::ch, bench::line::vec::lifo::ch
 );
 
 criterion_main!(benches);
