@@ -22,30 +22,6 @@ path = "src/lib.rs"
 name = "mtatlin"
 path = "src/monitor/mtatlin.rs"
 
-[[bin]]
-name = "mremote"
-path = "src/monitor/mremote.rs"
-
-[[bin]]
-name = "mworkload"
-path = "src/monitor/mworkload.rs"
-
-[[bin]]
-name = "mspawner"
-path = "src/monitor/mspawner.rs"
-
-[[bench]]
-name = "workload"
-harness = false
-
-[[bench]]
-name = "remote"
-harness = false
-
-[[bench]]
-name = "spawner"
-harness = false
-
 [[bench]]
 name = "tatlin"
 harness = false

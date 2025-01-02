@@ -8,6 +8,5 @@ pub mod watcher;
 pub mod work;
 
 pub mod bench {
-    pub mod remote;
     pub mod tatlin;
 }

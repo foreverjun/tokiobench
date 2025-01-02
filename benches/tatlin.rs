@@ -29,7 +29,7 @@ pub mod builder {
             let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
             for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-                let rt = rt::new(nworker);
+                let rt = rt::new(nworker, 0);
 
                 group.throughput(Throughput::Elements(nspawn as u64));
                 group.bench_function(
@@ -60,7 +60,7 @@ pub mod builder {
             let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
             for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-                let rt = rt::new(nworker);
+                let rt = rt::new(nworker, 0);
 
                 group.throughput(Throughput::Elements(nspawn as u64));
                 group.bench_function(
@@ -97,7 +97,7 @@ pub mod builder {
             let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
             for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-                let rt = rt::new(nworker);
+                let rt = rt::new(nworker, 0);
 
                 group.throughput(Throughput::Elements(nspawn as u64));
                 group.bench_function(
@@ -139,7 +139,7 @@ pub mod builder {
                 let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
                 for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-                    let rt = rt::new(nworker);
+                    let rt = rt::new(nworker, nspawner);
 
                     group.throughput(Throughput::Elements(nspawn as u64));
                     group.bench_function(
@@ -189,7 +189,7 @@ pub mod builder {
                 let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
                 for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-                    let rt = rt::new_no_lifo(nworker);
+                    let rt = rt::new_no_lifo(nworker, 0);
 
                     group.throughput(Throughput::Elements(nspawn as u64));
                     group.bench_function(
