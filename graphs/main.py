@@ -1,13 +1,9 @@
-#!/usr/bin/env python
-
 import pathlib as lpath
-import matplotlib.pyplot as plt
 import argparse
-import itertools as it
 
 import params as p
 
-import bench as bench
+import bench
 import metrics
 
 def main():
@@ -20,10 +16,12 @@ def main():
     parser.add_argument("-p", "--prefix", default=None)
 
     # enable benches
-    parser.add_argument("-b", "--bench", action="store_true", default=False)
+    parser.add_argument("-bl", "--bline", action="store_true", default=False)
+    parser.add_argument("-bs", "--bscatter", action="store_true", default=False)
+
     # enable metrics
-    parser.add_argument("-s", "--sampling", action="store_true", default=False)
-    parser.add_argument("-t", "--total", action="store_true", default=False)
+    parser.add_argument("-ms", "--msampling", action="store_true", default=False)
+    parser.add_argument("-mt", "--mtotal", action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -36,12 +34,16 @@ def main():
 
     lpath.Path(p.RESULT_PATH).mkdir(mode=0o777, parents=True, exist_ok=True)
 
-    if args.bench:
-        bench.run()
+    if args.bscatter:
+        bench.nspawn_nspawner_scatter()
+        bench.nspawn_nspawner_nworker_scatters()
 
-    if args.total:
+    if args.bline:
+        bench.nspawn_nspawner_nworker_line()
+
+    if args.mtotal:
         metrics.run_total()
-    if args.sampling:
+    if args.msampling:
         metrics.run_sampling()
 
 if __name__ == "__main__":

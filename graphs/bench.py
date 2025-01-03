@@ -1,5 +1,4 @@
 import json
-import os
 import pathlib as lpath
 import re
 from pathlib import Path
@@ -15,29 +14,34 @@ sns.set_theme()
 def dirs() -> list[lpath.Path]:
     return list(p.CRITERION_PATH.glob("*"))
 
-def nspawn_nspawner(path: lpath.Path):
+def bench_dirs(d: lpath.Path, pattern: re.Pattern[str]) -> list[lpath.Path]:
+    return [f for f in d.glob("*") if f.is_dir() and pattern.match(f.name)]
+
+def nspawn_nspawner_scatter():
     pattern = re.compile(r"nspawn\((\d+)\)_nspawner\((\d+)\)")
     name_pattern = re.compile(r"nspawn\((\d+)\)/nspawner\((\d+)\)")
+
     for d in dirs():
-        benches = [f for f in os.scandir(d.path) if f.is_dir() and pattern.match(f.name)]
-        print(d.name)
+        benches = bench_dirs(d, pattern)
+        print("processing:",  d.name)
+
         if len(benches) == 0:
             continue
+
         data = []
         for bench in benches:
-            estp_path = Path(bench.path) / "new" / "estimates.json"
-            bpath_path = Path(bench.path) / "new" / "benchmark.json"
-            sample_path = Path(bench.path) / "new" / "sample.json"
+            estp_path = bench / "new" / "estimates.json"
+            bpath_path = bench / "new" / "benchmark.json"
 
             estp = json.load(estp_path.open())
-            min_time = min(json.load(sample_path.open())["times"])
             bpath = json.load(bpath_path.open())
-            # thr = bpath["throughput"]["Elements"] / min_time * 10 ** 9
             thr = (bpath["throughput"]["Elements"] / estp["mean"]["point_estimate"]) * 10 ** 9
             name = bpath["function_id"]
+
             match = name_pattern.match(name)
             spawn_num = int(match.group(1))
             nspawner = int(match.group(2))
+
             data.append({
                 "spawn_num": spawn_num,
                 "nspawner": nspawner,
@@ -46,51 +50,24 @@ def nspawn_nspawner(path: lpath.Path):
 
         df = pd.DataFrame(data)
 
-        filename = path / f"{d.name}_scatterplot.png"
+        res_dir = p.RESULT_PATH / d
+        res_dir.mkdir(777, True, True)
+
         plt.figure(figsize=(12, 6))
-        sns.scatterplot(data=df, x="nspawner", y="spawn_num", size="throughput", sizes=(20, 200), hue="throughput",
-                        palette="cool", legend="auto")
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        sns.scatterplot(data=df,
+                        x="nspawner",
+                        y="spawn_num",
+                        size="throughput",
+                        sizes=(20, 200),
+                        hue="throughput",
+                        palette="cool",
+                        legend="auto")
+        plt.savefig(res_dir / f"{d.name}_scatterplot",
+                    dpi=300,
+                    bbox_inches='tight')
         plt.close()
 
-def nspawn_nworker(path: lpath.Path):
-    pattern = re.compile(r"nspawn\((\d+)\)_nworker\((\d+)\)")
-    name_pattern = re.compile(r"nspawn\((\d+)\)/nworker\((\d+)\)")
-    for d in dirs():
-        benches = [f for f in os.scandir(d.path) if f.is_dir() and pattern.match(f.name)]
-        print(d.name)
-        if len(benches) == 0:
-            continue
-        data = []
-        for bench in benches:
-            estp_path = Path(bench.path) / "new" / "estimates.json"
-            bpath_path = Path(bench.path) / "new" / "benchmark.json"
-
-            estp = json.load(estp_path.open())
-            bpath = json.load(bpath_path.open())
-
-            thrpt = (bpath["throughput"]["Elements"] / estp["mean"]["point_estimate"]) * 10 ** 9
-            name = bpath["function_id"]
-            match = name_pattern.match(name)
-
-            ntask = int(match.group(1))
-            nworker = int(match.group(2))
-            data.append({
-                "ntask": ntask,
-                "nworker": nworker,
-                "thrpt": thrpt
-            })
-
-        df = pd.DataFrame(data)
-
-        filename = path / f"{d.name}_scatterplot.png"
-        plt.figure(figsize=(12, 6))
-        sns.scatterplot(data=df, x="nworker", y="ntask", size="thrpt", sizes=(20, 200), hue="thrpt",
-                        palette="cool", legend="auto")
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
-        plt.close()
-
-def nspawn_nspawner_nworker(path: lpath.Path):
+def nspawn_nspawner_nworker_scatters():
     pattern = re.compile(r"nspawn\((\d+)\)_nspawner\((\d+)\)_nworker\((\d+)\)")
     name_pattern = re.compile(r"nspawn\((\d+)\)/nspawner\((\d+)\)/nworker\((\d+)\)") # nspawn(1000)/nspawner(1)/nworker(4)
 
@@ -111,7 +88,7 @@ def nspawn_nspawner_nworker(path: lpath.Path):
 
             thrpt = (benchmark_json["throughput"]["Elements"] / estimates_json["mean"]["point_estimate"]) * 10 ** 9
             name = benchmark_json["function_id"]
-            print("name:", name)
+            print("Processing:", name)
             match = name_pattern.match(name)
 
             nspawn = int(match.group(1))
@@ -125,29 +102,28 @@ def nspawn_nspawner_nworker(path: lpath.Path):
                 "thrpt": thrpt
             })
 
-        print(data)
+        res_dir = p.RESULT_PATH / d
+        res_dir.mkdir(777, parents=True, exist_ok=True)
 
-        plt.figure(figsize=(100, 100))
-        filename = path / f"{d.name}_scatterplot.png"
-
-        # fig, axes = plt.subplots(len(data))
-        data = sorted(list(data.items()), key=lambda t: t[0])
-
-        for ind, (nworker, dict_data) in enumerate(data):
-
-            x_values = list(map(lambda d: d["nspawner"], dict_data))
-            y_values = list(map(lambda d: d["nspawn"], dict_data))
-            z_values = list(map(lambda d: d["thrpt"], dict_data))
+        for nworker, dict_data in sorted(list(data.items()), key=lambda t: t[0]):
             df = pd.DataFrame(dict_data)
 
-            filename = path / f"{d.name}_scatterplot_nworker{nworker}.png"
             plt.figure(figsize=(12, 6))
-            sns.scatterplot(data=df, x="nspawner", y="nspawn", size="thrpt", sizes=(20, 200), hue="thrpt",
-                            palette="cool", legend="auto")
-            plt.savefig(filename, dpi=300, bbox_inches='tight')
+            sns.scatterplot(data=df,
+                            x="nspawner",
+                            y="nspawn",
+                            size="thrpt",
+                            sizes=(20, 200),
+                            hue="thrpt",
+                            palette="cool",
+                            legend="auto")
+
+            plt.savefig(res_dir / f"{d.name}_scatterplot_nworker{nworker}",
+                        dpi=300,
+                        bbox_inches='tight')
             plt.close()
 
-def nspawn_nspawner_nworker_line(path: lpath.Path):
+def nspawn_nspawner_nworker_line():
     pattern = re.compile(r"nspawn\((\d+)\)_nspawner\((\d+)\)_nworker\((\d+)\)")
     name_pattern = re.compile(r"nspawn\((\d+)\)/nspawner\((\d+)\)/nworker\((\d+)\)") # nspawn(1000)/nspawner(1)/nworker(4)
 
@@ -194,7 +170,7 @@ def nspawn_nspawner_nworker_line(path: lpath.Path):
         res_dir = p.RESULT_PATH / d.name
         res_dir.mkdir(0o777, parents=True, exist_ok=True)
 
-        for ind, (nspawn, dict_data) in enumerate(data):
+        for nspawn, dict_data in data:
             legend =[]
 
             for (nworker, w_dict_data) in sorted(dict_data.items(), key=lambda i:i[0]):
@@ -217,14 +193,3 @@ def nspawn_nspawner_nworker_line(path: lpath.Path):
                 plt.title(f"Tatlin benchmark. Number of leaf tasks per spawner: {nspawn}")
             # break
             plt.savefig(res_dir / f"line_{nspawn}")
-
-
-
-def run():
-    common = p.RESULT_PATH / "common"
-    common.mkdir(mode=0o777, parents=True, exist_ok=True)
-
-    # nspawn_nspawner(common)
-    # nspawn_nworker(common)
-    # nspawn_nspawner_nworker(common)
-    nspawn_nspawner_nworker_line(common)
