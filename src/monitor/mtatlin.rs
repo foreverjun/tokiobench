@@ -69,8 +69,8 @@ fn run_sampling(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
             &[
                 &format!("sampling"),
                 &format!("nworker:{nworker}"),
-                &format!("nspawner:{nworker}"),
-                &format!("nspawn:{nworker}"),
+                &format!("nspawner:{nspawner}"),
+                &format!("nspawn:{nspawn}"),
                 &format!("{name}"),
             ],
             &format!("iter:{niter}.csv"),
@@ -116,10 +116,11 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
         &[
             &format!("total"),
             &format!("nworker:{nworker}"),
-            &format!("nspawner:{nworker}"),
-            &format!("nspawn:{nworker}"),
+            &format!("nspawner:{nspawner}"),
+            &format!("nspawn:{nspawn}"),
+            &format!("{name}"),
         ],
-        &format!("{name}.json"),
+        &format!("total.json"),
     );
     mpath::store_json(&prefix, &metrics);
 }
