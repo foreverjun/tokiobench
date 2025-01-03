@@ -93,53 +93,6 @@ pub mod builder {
             group.finish();
         }
     }
-
-    // TODO (duplication but no call by ref)
-    pub mod no_lifo {
-        use super::*;
-
-        pub fn ch(
-            name: &str,
-            nspawn: &[usize],
-            nspawner: &[usize],
-            nworker: &[usize],
-            c: &mut Criterion,
-        ) {
-            let (tx, rx) = mpsc::sync_channel(1);
-            let mut group = c.benchmark_group(format!("tatlin/{name}"));
-
-            for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-                let rt = rt::new_no_lifo(nworker, 1);
-
-                group.throughput(Throughput::Elements(nspawn as u64));
-                group.bench_function(
-                    format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
-                    |b| {
-                        let (root_handles, leaf_handles) = tatlin::mk_handles(nspawner, nspawn);
-
-                        b.iter_reuse(
-                            (root_handles, leaf_handles),
-                            |(root_handles, leaf_handles)| {
-                                let tx = tx.clone();
-
-                                let _gurad = rt.enter();
-                                tatlin::blocking::ch(
-                                    nspawner,
-                                    nspawn,
-                                    tx,
-                                    root_handles,
-                                    leaf_handles,
-                                );
-
-                                rx.recv().unwrap()
-                            },
-                        );
-                    },
-                );
-            }
-            group.finish();
-        }
-    }
 }
 
 fn nworker() -> Vec<usize> {
@@ -160,11 +113,21 @@ mod bench {
             (1..=20).collect()
         }
 
-        pub mod vec {
+        pub fn ch(c: &mut Criterion) {
+            builder::ch("scatter/vec/ch", &nspawn(), &nspawner(), &nworker(), c)
+        }
+
+        pub mod blocking {
             use super::*;
 
             pub fn ch(c: &mut Criterion) {
-                builder::ch("scatter/vec/ch", &nspawn(), &nspawner(), &nworker(), c)
+                builder::blocking::ch(
+                    "line/vec/blocking/ch",
+                    &nspawn(),
+                    &nspawner(),
+                    &nworker(),
+                    c,
+                )
             }
         }
     }
@@ -182,14 +145,6 @@ mod bench {
 
         pub fn ch(c: &mut Criterion) {
             builder::ch("line/vec/ch", &nspawn(), &nspawner(), &nworker(), c)
-        }
-
-        pub mod no_lifo {
-            use super::*;
-
-            pub fn ch(c: &mut Criterion) {
-                builder::no_lifo::ch("line/vec/no_lifo/ch", &nspawn(), &nspawner(), &nworker(), c)
-            }
         }
 
         pub mod blocking {
@@ -215,7 +170,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(40))
         .warm_up_time(Duration::from_secs(3));
 
-    targets = bench::line::blocking::ch
+    targets = bench::line::blocking::ch, bench::line::ch
 );
 
 criterion_main!(benches);
