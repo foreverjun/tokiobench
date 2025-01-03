@@ -8,16 +8,11 @@ async fn task() {
     std::hint::black_box(());
 }
 
-pub type Fn = fn(
-    usize,
-    usize,
-    SyncSender<(
-        Vec<JoinHandle<Vec<JoinHandle<()>>>>,
-        Vec<Vec<JoinHandle<()>>>,
-    )>,
-    Vec<JoinHandle<Vec<JoinHandle<()>>>>,
-    Vec<Vec<JoinHandle<()>>>,
-) -> ();
+pub type RootHandles = Vec<JoinHandle<Vec<JoinHandle<()>>>>;
+pub type LeafHandles = Vec<Vec<JoinHandle<()>>>;
+
+pub type Fn =
+    fn(usize, usize, SyncSender<(RootHandles, LeafHandles)>, RootHandles, LeafHandles) -> ();
 
 pub type LeafFn = fn(Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>>;
 
@@ -34,16 +29,22 @@ fn spawn_tasks(mut handles: Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>> {
     handles
 }
 
+pub fn mk_handles(nspawner: usize, nspawn: usize) -> (RootHandles, LeafHandles) {
+    let leaf_handles = (0..nspawner)
+        .map(|_| Vec::with_capacity(nspawn))
+        .collect::<Vec<_>>();
+    let root_handles = Vec::with_capacity(nspawner);
+
+    (root_handles, leaf_handles)
+}
+
 // TODO duplication. but no call by refernce
 pub fn ch(
     _nspawner: usize,
     _nspawn: usize,
-    tx: SyncSender<(
-        Vec<JoinHandle<Vec<JoinHandle<()>>>>,
-        Vec<Vec<JoinHandle<()>>>,
-    )>,
-    mut root_handles: Vec<JoinHandle<Vec<JoinHandle<()>>>>,
-    mut leaf_handles: Vec<Vec<JoinHandle<()>>>,
+    tx: SyncSender<(RootHandles, LeafHandles)>,
+    mut root_handles: RootHandles,
+    mut leaf_handles: LeafHandles,
 ) {
     cfg_if!(if #[cfg(feature = "check")] {
         assert!(root_handles.is_empty());
@@ -83,12 +84,9 @@ pub mod blocking {
     pub fn ch(
         _nspawner: usize,
         _nspawn: usize,
-        tx: SyncSender<(
-            Vec<JoinHandle<Vec<JoinHandle<()>>>>,
-            Vec<Vec<JoinHandle<()>>>,
-        )>,
-        mut root_handles: Vec<JoinHandle<Vec<JoinHandle<()>>>>,
-        mut leaf_handles: Vec<Vec<JoinHandle<()>>>,
+        tx: SyncSender<(RootHandles, LeafHandles)>,
+        mut root_handles: RootHandles,
+        mut leaf_handles: LeafHandles,
     ) {
         cfg_if!(if #[cfg(feature = "check")] {
             assert!(root_handles.is_empty());

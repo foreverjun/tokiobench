@@ -2,6 +2,7 @@ use std::sync::mpsc;
 
 use itertools::iproduct;
 use std::time::Duration;
+use tokiobench::bench::tatlin::mk_handles;
 
 use tokio_metrics as tms;
 use tokiobench::bench::tatlin;
@@ -26,11 +27,8 @@ mod log {
 fn run_sampling(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
     log::starting("sampling", name, nworker, nspawn, nspawner);
 
-    let mut leaf_handles = (0..nspawner)
-        .map(|_| Vec::with_capacity(nspawn))
-        .collect::<Vec<_>>();
-    let mut root_handles = Vec::with_capacity(nspawner);
     let mut metrics_results = Vec::with_capacity(SAMPLING_METRICS_BOUND);
+    let (mut root_handles, mut leaf_handles) = mk_handles(nspawner, nspawn);
 
     let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
@@ -67,10 +65,17 @@ fn run_sampling(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
             }
         };
 
-        let prefix = mpath::mk_prefix(&format!(
-            "sampling({name})_nworker({nworker})_nspawn({nspawn})_nspawner({nspawner})"
-        ));
-        mpath::store_csv(&prefix, &format!("iter({niter})"), &metrics_results);
+        let prefix = mpath::mk_path(
+            &[
+                &format!("sampling"),
+                &format!("nworker:{nworker}"),
+                &format!("nspawner:{nworker}"),
+                &format!("nspawn:{nworker}"),
+                &format!("{name}"),
+            ],
+            &format!("iter:{niter}.csv"),
+        );
+        mpath::store_csv(&prefix, &metrics_results);
         metrics_results.clear()
     }
 }
@@ -80,39 +85,43 @@ const TOTAL_ITERS: usize = 100;
 fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
     log::starting("total", name, nworker, nspawn, nspawner);
 
-    let mut leaf_handles = (0..nspawner)
-        .map(|_| Vec::with_capacity(nspawn))
-        .collect::<Vec<_>>();
-    let mut root_handles = Vec::with_capacity(nspawner);
+    let (mut root_handles, mut leaf_handles) = mk_handles(nspawner, nspawn);
 
-    // warmup
-    for _ in 0..NUM_WARMUP {
+    { // warmup
+        let (rt_tx, rt_rx) = mpsc::sync_channel(1);
+
+        for _ in 0..NUM_WARMUP {
+            let rt = rt::new(nworker, nspawner);
+
+            let _guard = rt.enter();
+            tatlin::ch(nspawner, nspawn, rt_tx.clone(), root_handles, leaf_handles);
+            (root_handles, leaf_handles) = rt_rx.recv().unwrap();
+        }
+    }
+
+    let metrics = { // execution
         let rt = rt::new(nworker, nspawner);
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
-        let _guard = rt.enter();
-        tatlin::ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
-        (root_handles, leaf_handles) = rt_rx.recv().unwrap();
-    }
-
-    // execution
-    let metrics = {
-        let rt = rt::new(nworker, nspawner);
-
         for _ in 0..TOTAL_ITERS {
-            let (rt_tx, rt_rx) = mpsc::sync_channel(1);
             let _guard = rt.enter();
-            tatlin::ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
+            tatlin::ch(nspawner, nspawn, rt_tx.clone(), root_handles, leaf_handles);
             (root_handles, leaf_handles) = rt_rx.recv().unwrap();
         }
 
         metrics::total(rt)
     };
 
-    let prefix = mpath::mk_prefix(&format!(
-        "total({name})_nworker({nworker})_nspawn({nspawn})_nspawner({nspawner})"
-    ));
-    mpath::store_json(&prefix, "total", &metrics);
+    let prefix = mpath::mk_path(
+        &[
+            &format!("total"),
+            &format!("nworker:{nworker}"),
+            &format!("nspawner:{nworker}"),
+            &format!("nspawn:{nworker}"),
+        ],
+        &format!("{name}.json"),
+    );
+    mpath::store_json(&prefix, &metrics);
 }
 
 fn main() -> () {
