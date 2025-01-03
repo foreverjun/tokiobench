@@ -23,7 +23,7 @@ pub mod builder {
         let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
         for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-            let rt = rt::new(nworker, 0);
+            let rt = rt::new(nworker, 1);
 
             group.throughput(Throughput::Elements(nspawn as u64));
             group.bench_function(
@@ -109,7 +109,7 @@ pub mod builder {
             let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
             for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-                let rt = rt::new_no_lifo(nworker, 0);
+                let rt = rt::new_no_lifo(nworker, 1);
 
                 group.throughput(Throughput::Elements(nspawn as u64));
                 group.bench_function(
