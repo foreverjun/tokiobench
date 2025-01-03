@@ -29,10 +29,7 @@ pub mod builder {
             group.bench_function(
                 format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
                 |b| {
-                    let leaf_handles = (0..nspawner)
-                        .map(|_| Vec::with_capacity(nspawn))
-                        .collect::<Vec<_>>();
-                    let root_handles = Vec::with_capacity(nspawner);
+                    let (root_handles, leaf_handles) = tatlin::mk_handles(nspawner, nspawn);
 
                     b.iter_reuse(
                         (root_handles, leaf_handles),
@@ -71,10 +68,7 @@ pub mod builder {
                 group.bench_function(
                     format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
                     |b| {
-                        let leaf_handles = (0..nspawner)
-                            .map(|_| Vec::with_capacity(nspawn))
-                            .collect::<Vec<_>>();
-                        let root_handles = Vec::with_capacity(nspawner);
+                        let (root_handles, leaf_handles) = tatlin::mk_handles(nspawner, nspawn);
 
                         b.iter_reuse(
                             (root_handles, leaf_handles),
@@ -121,10 +115,7 @@ pub mod builder {
                 group.bench_function(
                     format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
                     |b| {
-                        let leaf_handles = (0..nspawner)
-                            .map(|_| Vec::with_capacity(nspawn))
-                            .collect::<Vec<_>>();
-                        let root_handles = Vec::with_capacity(nspawner);
+                        let (root_handles, leaf_handles) = tatlin::mk_handles(nspawner, nspawn);
 
                         b.iter_reuse(
                             (root_handles, leaf_handles),

@@ -125,7 +125,7 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
 }
 
 fn main() -> () {
-    let nworker = vec![12];
+    let nworker = vec![1, 2, 4, 8, 12, 16, 24];
 
     for (nworker, nspawn, nspawner) in iproduct!(nworker, 5000..=5000, 1..20) {
         run_sampling("tatlin", nworker, nspawn, nspawner);
