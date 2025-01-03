@@ -15,7 +15,17 @@ const NUM_WARMUP: usize = 30;
 const SAMPLING_ITER: usize = 100;
 const SAMPLING_METRICS_BOUND: usize = 1_000_000;
 
+mod log {
+    pub fn starting(stype: &str, name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
+        println!(
+            "starting {stype} for {name} with nworker: {nworker}, nspawn: {nspawn}, nspawner: {nspawner}"
+        );
+    }
+}
+
 fn run_sampling(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
+    log::starting("sampling", name, nworker, nspawn, nspawner);
+
     let mut leaf_handles = (0..nspawner)
         .map(|_| Vec::with_capacity(nspawn))
         .collect::<Vec<_>>();
@@ -68,6 +78,8 @@ fn run_sampling(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
 const TOTAL_ITERS: usize = 100;
 
 fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
+    log::starting("total", name, nworker, nspawn, nspawner);
+
     let mut leaf_handles = (0..nspawner)
         .map(|_| Vec::with_capacity(nspawn))
         .collect::<Vec<_>>();
