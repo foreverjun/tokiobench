@@ -33,7 +33,7 @@ fn run_sampling(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
             // warmup iterations
             for _ in 0..NUM_WARMUP {
                 let rt_tx = rt_tx.clone();
-                tatlin::vec::ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
+                tatlin::ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
                 (root_handles, leaf_handles) = rt_rx.recv().unwrap();
             }
 
@@ -47,7 +47,7 @@ fn run_sampling(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
 
                 let rt_tx = rt_tx.clone();
 
-                tatlin::vec::ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
+                tatlin::ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
                 (root_handles, leaf_handles) = rt_rx.recv().unwrap();
 
                 m_stop_tx.send(()).unwrap();
@@ -77,7 +77,7 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
         let _guard = rt.enter();
-        tatlin::vec::ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
+        tatlin::ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
         (root_handles, leaf_handles) = rt_rx.recv().unwrap();
     }
 
@@ -88,7 +88,7 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
         for _ in 0..TOTAL_ITERS {
             let (rt_tx, rt_rx) = mpsc::sync_channel(1);
             let _guard = rt.enter();
-            tatlin::vec::ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
+            tatlin::ch(nspawner, nspawn, rt_tx, root_handles, leaf_handles);
             (root_handles, leaf_handles) = rt_rx.recv().unwrap();
         }
 
