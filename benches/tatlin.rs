@@ -25,7 +25,7 @@ pub mod builder {
         for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
             let rt = rt::new(nworker, 1);
 
-            group.throughput(Throughput::Elements(nspawn as u64));
+            group.throughput(Throughput::Elements((nspawn * nspawner) as u64));
             group.bench_function(
                 format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
                 |b| {
@@ -64,7 +64,7 @@ pub mod builder {
             for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
                 let rt = rt::new(nworker, nspawner);
 
-                group.throughput(Throughput::Elements(nspawn as u64));
+                group.throughput(Throughput::Elements((nspawn * nspawner) as u64));
                 group.bench_function(
                     format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
                     |b| {
