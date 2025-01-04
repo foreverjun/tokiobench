@@ -25,5 +25,3 @@ jobs:
 
       - run: cargo bench --verbose -F check --no-run
       - run: cargo test --verbose
-
-
