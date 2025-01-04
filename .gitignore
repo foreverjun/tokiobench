@@ -1,5 +1,6 @@
 /target
 
 /graphs/venv
+/graphs/.venv
 /graphs/output
 **/__pycache__
