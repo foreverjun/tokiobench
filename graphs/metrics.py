@@ -5,213 +5,168 @@ import json
 
 import matplotlib.pyplot as plt
 import matplotlib
-import numpy as np
 import pandas as pd
 import seaborn as sns
-from statsmodels.nonparametric.smoothers_lowess import lowess
 
 import params as p
 
-NAMES = [f for f in p.METRICS_PATH.glob("*") if f.is_dir()]
+def fetch_sampling() -> list[lpath.Path]:
+    return list((p.METRICS_PATH / "sampling").glob("*"))
 
+def fetch_n(name: str, path: lpath.Path, *, is_dir: bool) -> int | None:
+    assert path.is_dir() is is_dir
 
-# https://github.com/mwaskom/seaborn/issues/552#issuecomment-1668374877
-def regplot_lowess_ci(data, x, y, ci_level, n_boot, **kwargs):
-    x_ = data[x].to_numpy()
-    y_ = data[y].to_numpy()
-    x_grid = np.linspace(start=x_.min(), stop=x_.max(), num=1000)
+    pattern = re.compile(fr"{name}:(\d+)")
+    match = pattern.match(path.name)
+    if not match:
+        return None
 
-    def reg_func(_x, _y):
-        return lowess(exog=_x, endog=_y, xvals=x_grid, frac=0.5)
+    return int(match.group(1))
 
-    beta_boots = sns.algorithms.bootstrap(
-        x_, y_,
-        func=reg_func,
-        n_boot=n_boot,
-    )
-    err_bands = sns.utils.ci(beta_boots, ci_level, axis=0)
-    y_plt = reg_func(x_, y_)
+def fetch_sampling_iters() -> list[dict[str, int | str | lpath.Path]]:
+    res = []
+    for worker_path in fetch_sampling():
+        nworker= fetch_n("nworker", worker_path, is_dir=True)
+        if not nworker: continue
+        for nspawner_path in worker_path.glob("*"):
+            nspawner = fetch_n("nspawner", nspawner_path, is_dir=True)
+            if not nspawner: continue
+            for nspawn_path in nspawner_path.glob("*"):
+                nspawn = fetch_n("nspawn", nspawn_path, is_dir=True)
+                if not nspawn: continue
+                for name_path in nspawn_path.glob("*"):
+                    for iter_path in name_path.glob("*"):
+                        niter = fetch_n("iter", iter_path, is_dir=False)
+                        res.append({
+                            "nworker": nworker,
+                            "nspawner": nspawner,
+                            "nspawn": nspawn,
+                            "niter": niter,
+                            "path": iter_path,
+                            "name": name_path.name,
+                        })
+    return res
 
-    ax = sns.lineplot(x=x_grid, y=y_plt, color='red', **kwargs)
-    sns.scatterplot(x=x_, y=y_, ax=ax, **kwargs)
-    ax.fill_between(x_grid, *err_bands, alpha=.15, **kwargs)
-    return ax
+def group_by(grouper: str, data: list[dict[str, int | str | lpath.Path]]) -> dict[int | str, list[dict[str, int | str | lpath.Path]]]:
+    diffs = set(map(lambda i: i[grouper], data))
 
+    res = { }
+    for key in diffs:
+        assert (not isinstance(key, lpath.Path))
+        res[key] = [ d for d in data if d[grouper] == key]
 
-def scatter_plot(df, labels: list[str], result_path: lpath.Path, from_i: int = 0, to_i: int = sys.maxsize):
-    filtered = df[(df.iteration >= from_i) & (df.iteration <= to_i)]
-    for label in labels:
-        sns.relplot(
-            data=filtered,
-            x="time_nanos", y=label,
-        ).savefig(result_path / (label+"scatter"))
-        matplotlib.pyplot.close()
-
-
-def lowess_plot(df, labels: list[str], result_path: lpath.Path, from_i: int = 0, to_i: int = sys.maxsize):
-    filtered = df[(df.iteration >= from_i) & (df.iteration <= to_i)]
-    for label in labels:
-        regplot_lowess_ci(
-            data=filtered,
-            x="time_nanos", y=label, ci_level=95, n_boot=100
-        ).figure.savefig(result_path / (label+"lowess"))
-        print("saved")
-        matplotlib.pyplot.close()
-
-def merge_iters(base_dir):
-    all_data = []
-    if os.path.isdir(base_dir):
-        for file_name in os.listdir(base_dir):
-            if file_name.endswith('.csv'):
-                file_path = os.path.join(base_dir, file_name)
-                iteration_match = re.search(r'iter\((\d+)\)\.csv', file_name)
-
-                if iteration_match:
-                    iteration = int(iteration_match.group(1))
-                    print(iteration)
-                    df = pd.read_csv(file_path)
-                    df['iteration'] = iteration
-                    all_data.append(df)
-
-    if all_data:
-        result_df = pd.concat(all_data, ignore_index=True)
-        return result_df
-    else:
-        return pd.DataFrame()
-
-def process_df(df, plot_dir):
-    print("runned")
-    labels = ["global_queue_depth", "total_steal_count", "total_local_queue_depth", ]
-    df["time_nanos"] = df.groupby('iteration')['elapsed'].cumsum()
-    print("grouped")
-    print(df.shape)
-    lowess_plot(df, labels, plot_dir)
-    print("finished")
+    return res
 
 def run_sampling():
-    spawner_pattern = re.compile(r"sampling\((.*?)\)_nspawn\((\d+)\)_nworker\((\d+)\)")
-    workload_pattern = re.compile(r"sampling\((.*?)\)_nspawn\((\d+)\)_nspawner\((\d+)\)")
-    sns.set_theme()
-    for bname in NAMES:
-        print(bname.name)
-        match = spawner_pattern.match(bname.name)
-        if not match:
-            match = workload_pattern.match(bname.name)
-        if not match or not os.path.isdir(bname):
-            continue
-        sampling = match.group(1)
-        nspawn = match.group(2)
-        nworkers = match.group(3)
-        print("matched")
-        bdir = p.PLOTS_PATH / sampling
-        bdir.mkdir(mode=0o777, parents=True, exist_ok=True)
-        plot_dir = bdir / f"ns({nspawn})nw({nworkers})"
-        plot_dir.mkdir(mode=0o777, parents=True, exist_ok=True)
-        df = merge_iters(bname)
-        process_df(df, plot_dir)
+    def mk_resdir(*, name: str, nworker: int, nspawner: int, nspawn: int):
+        header = p.RESULT_PATH / "sampling" / name
+        res_dir = header / f"nworker:{nworker}" / f"nspawner:{nspawner}" / f"nspawn:{nspawn}"
+        res_dir.mkdir(mode=0o777, parents=True, exist_ok=True)
 
-class Json:
-    pass
+        return res_dir
 
-class NSpawner:
-    pass
+    def merge_iterations(data: list[dict[str, int | str | lpath.Path]]) -> pd.DataFrame:
+        all_data = []
+        for d in data:
+            df = pd.read_csv(d["path"])
+            df['iteration'] = d["niter"]
+            all_data.append(df)
+        return pd.concat(all_data, ignore_index=True)
 
-def read_total(base_dir: lpath.Path) -> Json:
-    for path in base_dir.glob("*"):
-        file_name = path.name
+    def scatter_plot(df, result_path: lpath.Path,):
+        metrics = {
+            "global_queue_depth": "global queue depth",
+            "total_steal_count": "total steal count",
+            "total_local_queue_depth": "total local queue depth",
+        }
 
-        if file_name != "total.json":
-            continue
+        fig, axs = plt.subplots(1, len(metrics))
+        fig.set_figwidth(15)
+        fig.set_figheight(15)
+        for n_ax, (metric, m_name) in enumerate(metrics.items()) :
+            x_ = df["time_nanos"].to_numpy()
+            y_ = df[metric].to_numpy()
+            sns.scatterplot(x=x_, y=y_, ax=axs[n_ax])
 
-        return json.load(path.open())
+        fig.savefig(result_path / (metric + "sampling"))
+        plt.close()
 
-def plot_histogram(data: list[int], name: str, plot_path: lpath.Path) -> None:
-    print("data", data)
+    data = fetch_sampling_iters()
 
-    pass
+    for name, name_data in group_by("name", data).items():
+        for nworker, nworker_data in group_by("nworker", name_data).items():
+            for nspawner, nspawner_data in group_by("nspawner", nworker_data).items():
+                for nspawn, nspawn_data in group_by("nspawn", nspawner_data).items():
+                    df = merge_iterations(nspawn_data)
+                    res_dir = mk_resdir(name=name, nworker=nworker, nspawner=nspawner, nspawn=nspawn)
 
-# metrics per worker
-def plot_total(json_data: Json, plot_dir: lpath.Path) -> None:
-    metrics = ["worker_local_schedule_count", "worker_steal_operations", "worker_overflow_count"]
-    lable   = ["local shedule", "steal operations", "overflow count"]
+                    df["time_nanos"] = df.groupby('iteration')['elapsed'].cumsum()
 
-    fig, axs = plt.subplots(1, len(metrics))
-    for ind, metric in enumerate(metrics):
-        ax = axs[ind]
-
-        y_points = json_data[metric]
-        x_points = list(range(1, len(y_points) + 1))
-
-        assert(len(y_points) == len(x_points))
-
-        ax.stem(x_points, y_points)
-
-        ax.set_xlabel("nworker value")
-        ax.set_title(lable[ind])
-
-    print("total saved in:", plot_dir)
-    fig.savefig(plot_dir / "total")
-
-# oveall metrics
-def plot_sum_total(json_data: list[NSpawner, Json], plot_dir: lpath.Path) -> None:
-    metrics = ["worker_local_schedule_count", "worker_steal_operations", "worker_overflow_count"]
-    lable   = ["local shedule", "steal operations", "overflow count"]
-
-    fig, axs = plt.subplots(1, len(metrics))
-
-    json_data = sorted(json_data, key=lambda t: t[0])
-
-    nspawn = list(map(lambda t: t[0], json_data))
-    json_data = list(map(lambda t: t[1], json_data))
-
-    for ind, metric in enumerate(metrics):
-        ax = axs[ind]
-
-        y_points = list(map(lambda j: sum(j[metric]), json_data))
-        x_points = nspawn
-
-        ax.stem(x_points, y_points)
-
-        ax.set_xlabel("nspawn value")
-        ax.set_title(lable[ind])
-
-    print("total_sum saved in in:", plot_dir)
-    fig.savefig(plot_dir / "total_sum")
-
-def run_total():
-    pattern = re.compile(r"total\((.*?)\)_nspawn\((\d+)\)_nspawner\((\d+)\)")
-    sns.set_theme()
-
-    nspawner_data: list[int, Json] = []
-
-    for bname in NAMES:
-        print("processing:", bname.name)
-
-        match = pattern.match(bname.name)
-        if not match or not bname.is_dir():
-            continue
-
-        print("matched:", bname.name)
-
-        total_name = match.group(1)
-        nspawn = match.group(2)
-        nspawner = match.group(3)
-
-        bdir = p.RESULT_PATH / total_name
-        bdir.mkdir(mode=0o777, parents=True, exist_ok=True)
-
-        plot_dir = bdir / f"npawn({nspawn})nspawner({nspawner})"
-        plot_dir.mkdir(mode=0o777, parents=True, exist_ok=True)
-
-        json_data = read_total(bname)
-        plot_total(json_data, plot_dir)
-
-        nspawner_data.append((nspawner, json_data))
-
-    plot_sum_total(nspawner_data, p.RESULT_PATH)
-
-if __name__== "__main__":
-    run_sampling()
-    run_total()
+                    scatter_plot(df, res_dir)
 
 
+def fetch_total() -> list[dict[str, int | str | lpath.Path]]:
+    res = []
+    for worker_path in (p.METRICS_PATH / "total").glob("*"):
+        nworker= fetch_n("nworker", worker_path, is_dir=True)
+        if not nworker: continue
+        for nspawner_path in worker_path.glob("*"):
+            nspawner = fetch_n("nspawner", nspawner_path, is_dir=True)
+            if not nspawner: continue
+            for nspawn_path in nspawner_path.glob("*"):
+                nspawn = fetch_n("nspawn", nspawn_path, is_dir=True)
+                if not nspawn: continue
+                for name_path in nspawn_path.glob("*"):
+                    for json_path in name_path.glob("total.json"):
+                        res.append({
+                            "nworker": nworker,
+                            "nspawner": nspawner,
+                            "nspawn": nspawn,
+                            "name": name_path.name,
+                            "path": json_path,
+                        })
+    return res
+
+def run_sum_total():
+    def plot_sum_total(*, name: str, nworker: int, nspawn: int, data: list[dict[str, int | str | lpath.Path]], res_dir: lpath.Path) -> None:
+        metrics = ["worker_local_schedule_count", "worker_steal_operations", "worker_overflow_count"]
+        lable   = ["local shedule", "steal operations", "overflow count"]
+
+        fig, axs = plt.subplots(1, len(metrics))
+        data = sorted(data, key=lambda t: t["nspawner"])
+
+        nspawner = list(map(lambda t: t["nspawner"], data))
+        json_data = list(map(lambda t: json.load(t["path"].open()), data))
+
+        for ind, metric in enumerate(metrics):
+            ax = axs[ind]
+
+            y_points = list(map(lambda j: sum(j[metric]), json_data))
+            if any(y > 0 for y in y_points):
+                ax.set_yscale('log')
+
+            x_points = nspawner
+
+            ax.stem(x_points, y_points)
+
+            ax.set_xlabel("number of spawners")
+            ax.set_title(lable[ind])
+
+        print("total_sum saved in in:", res_dir)
+
+        fig.set_figwidth(10)
+        fig.set_figheight(10)
+
+        fig.suptitle(f"Benchmark: {name} workers: {nworker} leaf tasks: {nspawn}")
+        fig.savefig(res_dir / "total_sum")
+
+    data = fetch_total()
+    for name, name_data in group_by("name", data).items():
+        for nworker, nworker_data in group_by("nworker", name_data).items():
+            for nspawn, nspawn_data in group_by("nspawn", nworker_data).items():
+                print(f"runing total for {name}: nworker: {nworker}, nspawn: {nspawn}")
+
+                res_dir = p.RESULT_PATH / "total" / name / f"nworker:{nworker}" / f"nspawn:{nspawn}"
+                res_dir.mkdir(mode=0o777, parents=True, exist_ok=True)
+
+                plot_sum_total(name=name, nworker=nworker, nspawn=nspawn, data=nspawn_data, res_dir=res_dir)

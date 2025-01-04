@@ -42,7 +42,7 @@ def main():
         bench.nspawn_nspawner_nworker_line()
 
     if args.mtotal:
-        metrics.run_total()
+        metrics.run_sum_total()
     if args.msampling:
         metrics.run_sampling()
 
