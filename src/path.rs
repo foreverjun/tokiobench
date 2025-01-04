@@ -15,7 +15,7 @@ pub mod metrics {
     }
 
     pub fn mk_path(prefix: &[&str], name: &str) -> PathBuf {
-        assert!(prefix.len() > 0);
+        assert!(!prefix.is_empty());
 
         let mut path = path();
         for &name in prefix {

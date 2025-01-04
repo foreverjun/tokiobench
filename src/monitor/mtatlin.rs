@@ -67,11 +67,11 @@ fn run_sampling(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
 
         let prefix = mpath::mk_path(
             &[
-                &format!("sampling"),
+                "sampling",
                 &format!("nworker:{nworker}"),
                 &format!("nspawner:{nspawner}"),
                 &format!("nspawn:{nspawn}"),
-                &format!("{name}"),
+                name,
             ],
             &format!("iter:{niter}.csv"),
         );
@@ -87,7 +87,8 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
 
     let (mut root_handles, mut leaf_handles) = mk_handles(nspawner, nspawn);
 
-    { // warmup
+    {
+        // warmup
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
         for _ in 0..NUM_WARMUP {
@@ -99,7 +100,8 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
         }
     }
 
-    let metrics = { // execution
+    let metrics = {
+        // execution
         let rt = rt::new(nworker, nspawner);
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
@@ -114,18 +116,18 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
 
     let prefix = mpath::mk_path(
         &[
-            &format!("total"),
+            "total",
             &format!("nworker:{nworker}"),
             &format!("nspawner:{nspawner}"),
             &format!("nspawn:{nspawn}"),
-            &format!("{name}"),
+            name,
         ],
-        &format!("total.json"),
+        "total.json",
     );
     mpath::store_json(&prefix, &metrics);
 }
 
-fn main() -> () {
+fn main() {
     let nworker = vec![1, 2, 4, 8, 12, 16, 24];
 
     for (nworker, nspawn, nspawner) in iproduct!(nworker, 5000..=5000, 1..=20) {
