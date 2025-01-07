@@ -96,11 +96,11 @@ pub mod blocking {
             assert!(leaf_handles.len() == _nspawner);
         });
 
-        tokio::spawn(async move {
-            for leaf_handle in leaf_handles.drain(..) {
-                root_handles.push(tokio::task::spawn_blocking(|| spawn_tasks(leaf_handle)));
-            }
+        for leaf_handle in leaf_handles.drain(..) {
+            root_handles.push(tokio::task::spawn_blocking(|| spawn_tasks(leaf_handle)));
+        }
 
+        tokio::spawn(async move {
             for leaf_handle in root_handles.drain(..) {
                 let mut leaf_handle = leaf_handle.await.unwrap();
 
