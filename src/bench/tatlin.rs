@@ -1,7 +1,5 @@
 use std::sync::mpsc::SyncSender;
 
-use cfg_if::cfg_if;
-
 use tokio::task::JoinHandle;
 
 async fn task() {
@@ -17,8 +15,26 @@ pub type Fn =
 pub type LeafFn = fn(Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>>;
 
 fn _static_assert() {
-    let _: Fn = ch;
+    let _: Fn = run_global;
+    let _: Fn = run_local;
+    let _: Fn = run_blocking;
+
     let _: LeafFn = spawn_tasks;
+}
+
+fn precond_assert(
+    nspawn: usize,
+    nspawner: usize,
+    leaf_handles: &LeafHandles,
+    root_handles: &RootHandles,
+) {
+    assert!(root_handles.is_empty());
+    assert!(root_handles.capacity() == nspawner);
+
+    assert!(leaf_handles
+        .iter()
+        .all(|i| i.is_empty() && i.capacity() == nspawn));
+    assert!(leaf_handles.len() == nspawner);
 }
 
 fn spawn_tasks(mut handles: Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>> {
@@ -39,20 +55,15 @@ pub fn mk_handles(nspawner: usize, nspawn: usize) -> (RootHandles, LeafHandles) 
 }
 
 // TODO duplication. but no call by refernce
-pub fn ch(
+pub fn run_local(
     _nspawner: usize,
     _nspawn: usize,
     tx: SyncSender<(RootHandles, LeafHandles)>,
     mut root_handles: RootHandles,
     mut leaf_handles: LeafHandles,
 ) {
-    cfg_if!(if #[cfg(feature = "check")] {
-        assert!(root_handles.is_empty());
-        assert!(root_handles.capacity() == _nspawner);
-
-        assert!(leaf_handles.iter().all(|i| i.is_empty() && i.capacity() == _nspawn));
-        assert!(leaf_handles.len() == _nspawner);
-    });
+    #[cfg(feature = "check")]
+    precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
 
     tokio::spawn(async move {
         for leaf_handle in leaf_handles.drain(..) {
@@ -73,45 +84,62 @@ pub fn ch(
     });
 }
 
-pub mod blocking {
-    use super::*;
+// TODO duplication. but no call by refernce
+pub fn run_global(
+    _nspawner: usize,
+    _nspawn: usize,
+    tx: SyncSender<(RootHandles, LeafHandles)>,
+    mut root_handles: RootHandles,
+    mut leaf_handles: LeafHandles,
+) {
+    #[cfg(feature = "check")]
+    precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
 
-    fn _static_assert() {
-        let _: Fn = ch;
+    for leaf_handle in leaf_handles.drain(..) {
+        root_handles.push(tokio::spawn(async move { spawn_tasks(leaf_handle) }));
     }
 
-    // TODO duplication. but no call by refernce
-    pub fn ch(
-        _nspawner: usize,
-        _nspawn: usize,
-        tx: SyncSender<(RootHandles, LeafHandles)>,
-        mut root_handles: RootHandles,
-        mut leaf_handles: LeafHandles,
-    ) {
-        cfg_if!(if #[cfg(feature = "check")] {
-            assert!(root_handles.is_empty());
-            assert!(root_handles.capacity() == _nspawner);
+    tokio::spawn(async move {
+        for leaf_handle in root_handles.drain(..) {
+            let mut leaf_handle = leaf_handle.await.unwrap();
 
-            assert!(leaf_handles.iter().all(|i| i.is_empty() && i.capacity() == _nspawn));
-            assert!(leaf_handles.len() == _nspawner);
-        });
-
-        for leaf_handle in leaf_handles.drain(..) {
-            root_handles.push(tokio::task::spawn_blocking(|| spawn_tasks(leaf_handle)));
-        }
-
-        tokio::spawn(async move {
-            for leaf_handle in root_handles.drain(..) {
-                let mut leaf_handle = leaf_handle.await.unwrap();
-
-                for leaf in leaf_handle.drain(..) {
-                    leaf.await.unwrap();
-                }
-
-                leaf_handles.push(leaf_handle)
+            for leaf in leaf_handle.drain(..) {
+                leaf.await.unwrap();
             }
 
-            tx.send((root_handles, leaf_handles)).unwrap()
-        });
+            leaf_handles.push(leaf_handle)
+        }
+
+        tx.send((root_handles, leaf_handles)).unwrap()
+    });
+}
+
+// TODO duplication. but no call by refernce
+pub fn run_blocking(
+    _nspawner: usize,
+    _nspawn: usize,
+    tx: SyncSender<(RootHandles, LeafHandles)>,
+    mut root_handles: RootHandles,
+    mut leaf_handles: LeafHandles,
+) {
+    #[cfg(feature = "check")]
+    precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
+
+    for leaf_handle in leaf_handles.drain(..) {
+        root_handles.push(tokio::task::spawn_blocking(|| spawn_tasks(leaf_handle)));
     }
+
+    tokio::spawn(async move {
+        for leaf_handle in root_handles.drain(..) {
+            let mut leaf_handle = leaf_handle.await.unwrap();
+
+            for leaf in leaf_handle.drain(..) {
+                leaf.await.unwrap();
+            }
+
+            leaf_handles.push(leaf_handle)
+        }
+
+        tx.send((root_handles, leaf_handles)).unwrap()
+    });
 }
