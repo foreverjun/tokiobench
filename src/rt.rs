@@ -1,9 +1,11 @@
+use std::time::Duration;
 use tokio::runtime::{self, Runtime};
 
-pub fn new(workers: usize) -> Runtime {
+pub fn new(workers: usize, bloking: usize) -> Runtime {
     runtime::Builder::new_multi_thread()
+        .max_blocking_threads(bloking)
         .worker_threads(workers)
-        .enable_all()
+        .thread_keep_alive(Duration::from_secs(10_000))
         .build()
         .unwrap()
 }

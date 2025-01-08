@@ -1,6 +1,8 @@
 pub mod metrics {
-    use std::fs::{self, File};
-    use std::io::Write;
+    use csv::Writer;
+    use serde::Serialize;
+    use serde_json;
+    use std::fs;
     use std::path::{Path, PathBuf};
 
     fn path() -> PathBuf {
@@ -12,25 +14,34 @@ pub mod metrics {
         path
     }
 
-    pub fn mk_prefix(folder: &str) -> PathBuf {
+    pub fn mk_path(prefix: &[&str], name: &str) -> PathBuf {
+        assert!(!prefix.is_empty());
+
         let mut path = path();
-        path.push(folder);
+        for &name in prefix {
+            path.push(name);
+        }
 
         if !Path::exists(&path) {
             fs::create_dir_all(&path).unwrap();
         }
 
+        path.push(name);
         path
     }
 
-    pub fn store(prefix: &Path, name: &str, data: &[u8]) {
-        let result_path = {
-            let mut prefix = PathBuf::from(prefix);
-            prefix.push(name);
-            prefix
-        };
+    pub fn store_csv(path: &Path, metrics: &[impl Serialize]) {
+        let result_path = path;
 
-        let mut f = File::create(result_path).unwrap();
-        f.write_all(data).unwrap();
+        let mut wrt = Writer::from_path(result_path).expect("cannot create writer");
+        for m in metrics.iter() {
+            wrt.serialize(m).unwrap()
+        }
+        wrt.flush().unwrap();
+    }
+
+    pub fn store_json(path: &Path, metrics: &impl Serialize) {
+        let bytes = serde_json::to_vec_pretty(metrics).expect("cannot map to json");
+        fs::write(path, bytes).expect("cannot write");
     }
 }

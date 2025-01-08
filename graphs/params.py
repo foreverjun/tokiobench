@@ -1,20 +1,8 @@
 import pathlib as lpath
 
-TARGET_PATH = lpath.Path().absolute() / "target"
+TARGET_PATH = lpath.Path().absolute().parent / "target"
 
 CRITERION_PATH = TARGET_PATH / "criterion"
-PLOTS_PATH = TARGET_PATH / "plots"
-
-NS_WORKERS=None
-NS_SPAWN_GLOBAL=None
-NS_SPAWN_LOCAL=None
-NS_SPLIT_LOCAL=None
-NS_SPLIT_GLOBAL=None
-N_SPAWN_GLOBAL=None
-N_SPAWN_LOCAL=None
-YIEDL_BOUND=None
-
-SPAWNER_PATH = CRITERION_PATH / "spawner"
-WORKLOAD_PATH = CRITERION_PATH / "workload"
-REMOTE_PATH = CRITERION_PATH / "remote"
 METRICS_PATH = TARGET_PATH / "metrics"
+
+RESULT_PATH = TARGET_PATH / "plots"
