@@ -1,7 +1,3 @@
-.PHONY: bench
-bench:
-	python3 .benchpy/bench.py
-
 .PHONY: clean
 clean:
 	cargo clean
@@ -11,8 +7,8 @@ clean:
 
 .PHONY: plot
 plot:
-	python3 .benchpy/plot.py
+	cd graphs && uv sync && uv run main.py -ms -mt
 
-.PHONY: metr
-metr:
-	python3 .benchpy/metric.py
+.PHONY: check
+check:
+	cargo bench --no-run -F check

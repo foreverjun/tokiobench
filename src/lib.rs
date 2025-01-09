@@ -1,8 +1,9 @@
-pub mod params;
+pub mod metrics;
 pub mod path;
 pub mod rt;
-pub mod split;
-pub mod watcher;
-pub mod work;
 
-pub mod spawner;
+pub mod watcher;
+
+pub mod bench {
+    pub mod tatlin;
+}

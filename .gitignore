@@ -1,5 +1,6 @@
-/target
+**/target
 
-/graphs/venv
-/graphs/output
+**/venv
+**/.venv
 **/__pycache__
+**/.vscode
