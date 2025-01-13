@@ -22,7 +22,7 @@ fn _static_assert() {
     let _: LeafFn = spawn_tasks;
 }
 
-fn precond_assert(
+fn _precond_assert(
     nspawn: usize,
     nspawner: usize,
     leaf_handles: &LeafHandles,
@@ -63,7 +63,7 @@ pub fn run_local(
     mut leaf_handles: LeafHandles,
 ) {
     #[cfg(feature = "check")]
-    precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
+    _precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
 
     tokio::spawn(async move {
         for leaf_handle in leaf_handles.drain(..) {
@@ -93,7 +93,7 @@ pub fn run_global(
     mut leaf_handles: LeafHandles,
 ) {
     #[cfg(feature = "check")]
-    precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
+    _precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
 
     for leaf_handle in leaf_handles.drain(..) {
         root_handles.push(tokio::spawn(async move { spawn_tasks(leaf_handle) }));
@@ -123,7 +123,7 @@ pub fn run_blocking(
     mut leaf_handles: LeafHandles,
 ) {
     #[cfg(feature = "check")]
-    precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
+    _precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
 
     for leaf_handle in leaf_handles.drain(..) {
         root_handles.push(tokio::task::spawn_blocking(|| spawn_tasks(leaf_handle)));
