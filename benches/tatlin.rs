@@ -56,7 +56,7 @@ fn bench_global(
     let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
     for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-        let rt = rt::new(nworker, nspawner);
+        let rt = rt::new(nworker, 1);
 
         group.throughput(Throughput::Elements((nspawn * nspawner) as u64));
         group.bench_function(
@@ -155,15 +155,15 @@ fn nworker() -> Vec<usize> {
     vec![1, 2, 4, 8, 12, 16, 24]
 }
 
+fn nspawner() -> Vec<usize> {
+    (1..=40).collect()
+}
+
 pub mod scatter {
     use super::*;
 
     fn nspawn() -> Vec<usize> {
-        (1..=10).map(|i| i * 1000).collect()
-    }
-
-    fn nspawner() -> Vec<usize> {
-        (1..=20).collect()
+        (1..=50).map(|i| i * 1000).collect()
     }
 
     benches! {"scatter"}
@@ -173,11 +173,7 @@ pub mod line {
     use super::*;
 
     fn nspawn() -> Vec<usize> {
-        vec![1000, 5000, 10000]
-    }
-
-    fn nspawner() -> Vec<usize> {
-        (1..=20).collect()
+        vec![5000]
     }
 
     benches! {"line"}
@@ -190,7 +186,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(100))
         .warm_up_time(Duration::from_secs(3));
 
-    targets = line::local, line::global, line::blocking
+    targets = line::local
 );
 
 criterion_main!(benches);
