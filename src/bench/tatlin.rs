@@ -3,7 +3,9 @@ use std::sync::mpsc::SyncSender;
 use tokio::task::JoinHandle;
 
 async fn task() {
-    std::hint::black_box(());
+    for _ in 0..100 {
+        std::hint::black_box(tokio::task::yield_now().await);
+    }
 }
 
 pub type RootHandles = Vec<JoinHandle<Vec<JoinHandle<()>>>>;
@@ -15,10 +17,7 @@ pub type Fn =
 pub type LeafFn = fn(Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>>;
 
 fn _static_assert() {
-    let _: Fn = run_global;
-    let _: Fn = run_local;
-    let _: Fn = run_blocking;
-
+    let _: Fn = run;
     let _: LeafFn = spawn_tasks;
 }
 
@@ -54,8 +53,7 @@ pub fn mk_handles(nspawner: usize, nspawn: usize) -> (RootHandles, LeafHandles) 
     (root_handles, leaf_handles)
 }
 
-// TODO duplication. but no call by refernce
-pub fn run_local(
+pub fn run(
     _nspawner: usize,
     _nspawn: usize,
     tx: SyncSender<(RootHandles, LeafHandles)>,
@@ -70,66 +68,6 @@ pub fn run_local(
             root_handles.push(tokio::spawn(async move { spawn_tasks(leaf_handle) }));
         }
 
-        for leaf_handle in root_handles.drain(..) {
-            let mut leaf_handle = leaf_handle.await.unwrap();
-
-            for leaf in leaf_handle.drain(..) {
-                leaf.await.unwrap();
-            }
-
-            leaf_handles.push(leaf_handle)
-        }
-
-        tx.send((root_handles, leaf_handles)).unwrap()
-    });
-}
-
-// TODO duplication. but no call by refernce
-pub fn run_global(
-    _nspawner: usize,
-    _nspawn: usize,
-    tx: SyncSender<(RootHandles, LeafHandles)>,
-    mut root_handles: RootHandles,
-    mut leaf_handles: LeafHandles,
-) {
-    #[cfg(feature = "check")]
-    _precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
-
-    for leaf_handle in leaf_handles.drain(..) {
-        root_handles.push(tokio::spawn(async move { spawn_tasks(leaf_handle) }));
-    }
-
-    tokio::spawn(async move {
-        for leaf_handle in root_handles.drain(..) {
-            let mut leaf_handle = leaf_handle.await.unwrap();
-
-            for leaf in leaf_handle.drain(..) {
-                leaf.await.unwrap();
-            }
-
-            leaf_handles.push(leaf_handle)
-        }
-
-        tx.send((root_handles, leaf_handles)).unwrap()
-    });
-}
-
-// TODO duplication. but no call by refernce
-pub fn run_blocking(
-    _nspawner: usize,
-    _nspawn: usize,
-    tx: SyncSender<(RootHandles, LeafHandles)>,
-    mut root_handles: RootHandles,
-    mut leaf_handles: LeafHandles,
-) {
-    #[cfg(feature = "check")]
-    _precond_assert(_nspawn, _nspawner, &leaf_handles, &root_handles);
-
-    for leaf_handle in leaf_handles.drain(..) {
-        root_handles.push(tokio::task::spawn_blocking(|| spawn_tasks(leaf_handle)));
-    }
-
-    tokio::spawn(async move {
         for leaf_handle in root_handles.drain(..) {
             let mut leaf_handle = leaf_handle.await.unwrap();
 

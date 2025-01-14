@@ -33,7 +33,7 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
             let rt = rt::new(nworker, nspawner);
 
             let _guard = rt.enter();
-            tatlin::run_blocking(nspawner, nspawn, rt_tx.clone(), root_handles, leaf_handles);
+            tatlin::run(nspawner, nspawn, rt_tx.clone(), root_handles, leaf_handles);
             (root_handles, leaf_handles) = rt_rx.recv().unwrap();
         }
     }
@@ -45,7 +45,7 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
 
         for _ in 0..TOTAL_ITERS {
             let _guard = rt.enter();
-            tatlin::run_blocking(nspawner, nspawn, rt_tx.clone(), root_handles, leaf_handles);
+            tatlin::run(nspawner, nspawn, rt_tx.clone(), root_handles, leaf_handles);
             (root_handles, leaf_handles) = rt_rx.recv().unwrap();
         }
 
