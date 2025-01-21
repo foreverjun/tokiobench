@@ -27,7 +27,7 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
         for _ in 0..NUM_WARMUP {
-            let rt = rt::new(nworker, nspawner as usize);
+            let rt = rt::new(nworker, nspawner);
 
             let _guard = rt.enter();
             tatlin::run(nspawner, nspawn, rt_tx.clone());
@@ -37,7 +37,7 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
 
     let metrics = {
         // execution
-        let rt = rt::new(nworker, nspawner as usize);
+        let rt = rt::new(nworker, nspawner);
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
         for _ in 0..TOTAL_ITERS {

@@ -79,9 +79,9 @@ pub mod line {
 criterion_group!(
     name = benches;
     config = Criterion::default()
-        .sample_size(400)
-        .measurement_time(Duration::from_secs(100))
-        .warm_up_time(Duration::from_secs(3));
+        .sample_size(300)
+        .measurement_time(Duration::from_secs(200))
+        .warm_up_time(Duration::from_secs(20));
 
     targets = line::local
 );
