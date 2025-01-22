@@ -17,6 +17,8 @@ fn bench(name: &str, nspawn: &[usize], nspawner: &[usize], nworker: &[usize], c:
         let rt = rt::new(nworker, 1);
 
         group.throughput(Throughput::Elements((nspawn * nspawner) as u64));
+        group.sampling_mode(criterion::SamplingMode::Linear);
+
         group.bench_function(
             format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
             |b| {
@@ -79,9 +81,9 @@ pub mod line {
 criterion_group!(
     name = benches;
     config = Criterion::default()
-        .sample_size(300)
-        .measurement_time(Duration::from_secs(200))
-        .warm_up_time(Duration::from_secs(20));
+        .sample_size(100)
+        .measurement_time(Duration::from_secs(100))
+        .warm_up_time(Duration::from_secs(5));
 
     targets = line::local
 );

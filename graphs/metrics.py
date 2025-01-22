@@ -10,9 +10,6 @@ import seaborn as sns
 
 import params as p
 
-def fetch_sampling() -> list[lpath.Path]:
-    return list((p.METRICS_PATH / "sampling").glob("*"))
-
 def fetch_n(name: str, path: lpath.Path, *, is_dir: bool) -> int | None:
     assert path.is_dir() is is_dir
 
@@ -25,7 +22,7 @@ def fetch_n(name: str, path: lpath.Path, *, is_dir: bool) -> int | None:
 
 def fetch_sampling_iters() -> list[dict[str, int | str | lpath.Path]]:
     res = []
-    for worker_path in fetch_sampling():
+    for worker_path in (p.METRICS_PATH / "sampling").glob("*"):
         nworker= fetch_n("nworker", worker_path, is_dir=True)
         if not nworker: continue
         for nspawner_path in worker_path.glob("*"):
@@ -75,20 +72,27 @@ def run_sampling():
 
     def scatter_plot(df, result_path: lpath.Path,):
         metrics = {
+            "total_steal_operations": "",
             "global_queue_depth": "global queue depth",
-            "total_steal_count": "total steal count",
+            "total_overflow_count": "",
             "total_local_queue_depth": "total local queue depth",
         }
 
         fig, axs = plt.subplots(1, len(metrics))
-        fig.set_figwidth(15)
-        fig.set_figheight(15)
-        for n_ax, (metric, m_name) in enumerate(metrics.items()) :
-            x_ = df["time_nanos"].to_numpy()
-            y_ = df[metric].to_numpy()
-            sns.scatterplot(x=x_, y=y_, ax=axs[n_ax])
 
-        fig.savefig(result_path / (metric + "sampling"))
+        fig.set_figwidth(30)
+        fig.set_figheight(15)
+
+        for n_ax, (metric, m_name) in enumerate(metrics.items()):
+            xs = df["time_nanos"].to_numpy()
+            ys = df[metric].to_numpy()
+            ax = axs[n_ax]
+
+            ax.set_title(metric)
+
+            sns.scatterplot(x=xs, y=ys, ax=axs[n_ax])
+
+        fig.savefig(result_path / "result")
         plt.close()
 
     data = fetch_sampling_iters()
@@ -97,6 +101,7 @@ def run_sampling():
         for nworker, nworker_data in group_by("nworker", name_data).items():
             for nspawner, nspawner_data in group_by("nspawner", nworker_data).items():
                 for nspawn, nspawn_data in group_by("nspawn", nspawner_data).items():
+                    print(f"running sampling for {name} nworker: {nworker}, nspawner: {nspawner}, nspawn: {nspawn}")
                     df = merge_iterations(nspawn_data)
                     res_dir = mk_resdir(name=name, nworker=nworker, nspawner=nspawner, nspawn=nspawn)
 
@@ -129,8 +134,7 @@ def fetch_total() -> list[dict[str, int | str | lpath.Path]]:
 
 def run_sum_total():
     def plot_sum_total(*, name: str, nworker: int, nspawn: int, data: list[dict[str, int | str | lpath.Path]], res_dir: lpath.Path) -> None:
-        metrics = ["worker_local_schedule_count", "worker_steal_operations", "worker_overflow_count"]
-        lable   = ["local shedule", "steal operations", "overflow count"]
+        metrics = ["remote_schedule_count", "spawned_tasks_count", "worker_steal_operations"]
 
         fig, axs = plt.subplots(1, len(metrics))
         data = sorted(data, key=lambda t: t["nspawner"])
@@ -141,7 +145,13 @@ def run_sum_total():
         for ind, metric in enumerate(metrics):
             ax = axs[ind]
 
-            y_points = list(map(lambda j: sum(j[metric]), json_data))
+            def sum_or(value):
+                if isinstance(value, int):
+                    return value
+
+                return sum(value)
+
+            y_points = list(map(lambda j: sum_or(j[metric]), json_data))
             if any(y > 0 for y in y_points):
                 ax.set_yscale('log')
 
@@ -150,11 +160,11 @@ def run_sum_total():
             ax.stem(x_points, y_points)
 
             ax.set_xlabel("number of spawners")
-            ax.set_title(lable[ind])
+            ax.set_title(metric)
 
         print("total_sum saved in in:", res_dir)
 
-        fig.set_figwidth(10)
+        fig.set_figwidth(15)
         fig.set_figheight(10)
 
         fig.suptitle(f"Benchmark: {name} workers: {nworker} leaf tasks: {nspawn}")
@@ -170,3 +180,37 @@ def run_sum_total():
                 res_dir.mkdir(mode=0o777, parents=True, exist_ok=True)
 
                 plot_sum_total(name=name, nworker=nworker, nspawn=nspawn, data=nspawn_data, res_dir=res_dir)
+
+def run_total_steal_ops():
+    plt.close()
+    plt.figure(figsize=(10, 10))
+
+    data = fetch_total()
+    for name, name_data in group_by("name", data).items():
+        for nspawn, nspawn_data in group_by("nspawn", name_data).items():
+            print(f"runing total worker for {name}: nspawn: {nspawn}")
+
+            res_dir = p.RESULT_PATH / "total" / name / f"nspawn:{nspawn}"
+            res_dir.mkdir(mode=0o777, parents=True, exist_ok=True)
+            legend =[]
+
+            for nworker, nworker_data in group_by("nworker", nspawn_data).items():
+
+                nworker_data = sorted(nworker_data, key=lambda i: i["nspawner"])
+
+                x_values = list(map(lambda d: d["nspawner"], nworker_data))
+
+                jsons = list(map(lambda d: json.load(d["path"].open()), nworker_data))
+                y_values = list(map(lambda d: sum(d["worker_steal_operations"]), jsons))
+
+                plt.errorbar(x_values, y_values)
+                legend.append(f"{nworker} workers")
+
+            plt.xlabel("Number of spawners")
+            plt.ylabel("Steal operations")
+            plt.yscale("log")
+
+            plt.title(f"Number of leaf tasks per spawner: {nspawn}")
+
+            plt.legend(legend)
+            plt.savefig(res_dir / f"res")

@@ -193,3 +193,4 @@ def nspawn_nspawner_nworker_line():
                 plt.title(f"Tatlin benchmark. Number of leaf tasks per spawner: {nspawn}")
             # break
             plt.savefig(res_dir / f"line_{nspawn}")
+            plt.close()
