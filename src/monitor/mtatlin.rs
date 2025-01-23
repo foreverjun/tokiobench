@@ -63,8 +63,8 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
 }
 
 fn main() {
-    let nworker = vec![1, 2, 4, 8, 12, 16, 24];
-    let nspawner = 1..=50;
+    let nworker = vec![1, 2, 4, 8, 12];
+    let nspawner = 1..=60;
     let nspawn = vec![5000];
 
     for (nworker, nspawner, nspawn) in iproduct!(nworker, nspawner, nspawn) {

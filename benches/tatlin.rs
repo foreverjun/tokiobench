@@ -37,11 +37,11 @@ fn bench(name: &str, nspawn: &[usize], nspawner: &[usize], nworker: &[usize], c:
 }
 
 fn nworker() -> Vec<usize> {
-    vec![1, 2, 4, 8, 12, 16, 24]
+    vec![1, 2, 4, 8, 12]
 }
 
 fn nspawner() -> Vec<usize> {
-    (1..=40).collect()
+    (1..=60).collect()
 }
 
 macro_rules! benches {
