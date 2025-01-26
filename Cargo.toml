@@ -26,6 +26,10 @@ path = "src/monitor/mtatlin.rs"
 name = "tatlin"
 harness = false
 
+[[bench]]
+name = "steal"
+harness = false
+
 [features]
 full = []
 check = []

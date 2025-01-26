@@ -5,3 +5,6 @@ pub mod rt;
 pub mod bench {
     pub mod tatlin;
 }
+pub mod monitor {
+    pub mod metrics;
+}

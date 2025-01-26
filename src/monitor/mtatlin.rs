@@ -25,28 +25,30 @@ fn run_total(name: &str, nworker: usize, nspawn: usize, nspawner: usize) {
     {
         // warmup
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
+        let (mut root_hs, mut leaf_hs) = tatlin::mk_handles(nspawner, nspawn);
 
         for _ in 0..NUM_WARMUP {
             let rt = rt::new(nworker, nspawner);
 
             let _guard = rt.enter();
-            tatlin::run(nspawner, nspawn, rt_tx.clone());
-            rt_rx.recv().unwrap();
+            tatlin::run(nspawner, nspawn, rt_tx.clone(), root_hs, leaf_hs);
+            (root_hs, leaf_hs) = rt_rx.recv().unwrap();
         }
     }
 
     let metrics = {
         // execution
+        let (mut root_hs, mut leaf_hs) = tatlin::mk_handles(nspawner, nspawn);
         let rt = rt::new(nworker, nspawner);
         let (rt_tx, rt_rx) = mpsc::sync_channel(1);
 
         for _ in 0..TOTAL_ITERS {
             let _guard = rt.enter();
-            tatlin::run(nspawner, nspawn, rt_tx.clone());
-            rt_rx.recv().unwrap();
+            tatlin::run(nspawner, nspawn, rt_tx.clone(), root_hs, leaf_hs);
+            (root_hs, leaf_hs) = rt_rx.recv().unwrap();
         }
 
-        metrics::total(rt)
+        metrics::total(&rt)
     };
 
     let prefix = mpath::mk_path(

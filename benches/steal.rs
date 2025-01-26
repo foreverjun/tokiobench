@@ -5,16 +5,46 @@ use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use itertools::iproduct;
+use std::sync::Arc;
+use tokio::runtime::Runtime;
 use tokiobench::bench::tatlin;
+use tokiobench::monitor::metrics::StealOpsMeasurement;
 
+use std::sync::Mutex;
+use std::sync::OnceLock;
 use tokiobench::rt;
 
-fn bench(name: &str, nspawn: &[usize], nspawner: &[usize], nworker: &[usize], c: &mut Criterion) {
+type SharedRT = Arc<Mutex<Box<Option<Runtime>>>>;
+
+/// Make runtime global state
+/// to satisfy poor criterion.rs custrom measurements interface
+/// TODO()
+static RT: OnceLock<SharedRT> = OnceLock::new();
+
+fn alloc_box() -> SharedRT {
+    let foi = RT.get_or_init(|| Arc::new(Mutex::new(Box::new(None))));
+    Arc::clone(foi)
+}
+
+fn bench(
+    name: &str,
+    nspawn: &[usize],
+    nspawner: &[usize],
+    nworker: &[usize],
+    c: &mut Criterion<StealOpsMeasurement>,
+) {
     let (tx, rx) = mpsc::sync_channel(1);
     let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
     for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
         let rt = rt::new(nworker, 1);
+        let _gurad = rt.enter(); // entering runtime
+
+        {
+            let shared_rt = Arc::clone(RT.get().unwrap());
+            let mut shared_rt = shared_rt.lock().unwrap();
+            shared_rt.replace(rt);
+        }
 
         group.throughput(Throughput::Elements((nspawn * nspawner) as u64));
         group.sampling_mode(criterion::SamplingMode::Linear);
@@ -24,8 +54,6 @@ fn bench(name: &str, nspawn: &[usize], nspawner: &[usize], nworker: &[usize], c:
             |b| {
                 let hs = tatlin::mk_handles(nspawner, nspawn);
                 b.iter_reuse(hs, |(root_hs, leaf_hs)| {
-                    let _guard = rt.enter();
-
                     tatlin::run(nspawner, nspawn, tx.clone(), root_hs, leaf_hs);
                     rx.recv().unwrap()
                 });
@@ -45,7 +73,7 @@ fn nspawner() -> Vec<usize> {
 
 macro_rules! benches {
     ($expression:tt) => {
-        pub fn local(c: &mut Criterion) {
+        pub fn local(c: &mut Criterion<StealOpsMeasurement>) {
             bench(
                 concat!($expression, "/local"),
                 &nspawn(),
@@ -80,9 +108,10 @@ pub mod line {
 criterion_group!(
     name = benches;
     config = Criterion::default()
-        .sample_size(100)
-        .measurement_time(Duration::from_secs(100))
-        .warm_up_time(Duration::from_secs(5));
+        .sample_size(10)
+        .measurement_time(Duration::from_secs(10))
+        .warm_up_time(Duration::from_secs(5))
+        .with_measurement(tokiobench::monitor::metrics::StealOpsMeasurement { rt: alloc_box() });
 
     targets = line::local
 );

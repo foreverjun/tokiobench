@@ -1,4 +1,5 @@
 use serde::Serialize;
+use tokio::runtime::Runtime;
 use tokio_metrics;
 
 #[derive(Serialize)]
@@ -65,7 +66,7 @@ pub struct TotalMetrics {
     pub worker_overflow_count: Vec<u64>,
 }
 
-pub fn total(rt: tokio::runtime::Runtime) -> TotalMetrics {
+pub fn total(rt: &tokio::runtime::Runtime) -> TotalMetrics {
     let m = rt.metrics();
 
     let workers = m.num_workers();
@@ -85,4 +86,8 @@ pub fn total(rt: tokio::runtime::Runtime) -> TotalMetrics {
             .collect(),
         worker_overflow_count: (0..workers).map(|i| m.worker_overflow_count(i)).collect(),
     }
+}
+
+pub fn total_steal_ops(rt: &Runtime) -> u64 {
+    total(rt).worker_steal_operations.into_iter().sum()
 }
