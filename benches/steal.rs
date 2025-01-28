@@ -28,6 +28,7 @@ fn alloc_box() -> SharedRT {
 
 fn bench(
     name: &str,
+    fun: tatlin::Bench,
     nspawn: &[usize],
     nspawner: &[usize],
     nworker: &[usize],
@@ -52,9 +53,8 @@ fn bench(
         group.bench_function(
             format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
             |b| {
-                let hs = tatlin::mk_handles(nspawner, nspawn);
-                b.iter_reuse(hs, |(root_hs, leaf_hs)| {
-                    tatlin::run(nspawner, nspawn, tx.clone(), root_hs, leaf_hs);
+                b.iter(|| {
+                    fun(nspawner, nspawn, tx.clone());
                     rx.recv().unwrap()
                 });
             },
@@ -73,9 +73,10 @@ fn nspawner() -> Vec<usize> {
 
 macro_rules! benches {
     ($expression:tt) => {
-        pub fn local(c: &mut Criterion<StealOpsMeasurement>) {
+        pub fn origin(c: &mut Criterion<StealOpsMeasurement>) {
             bench(
-                concat!($expression, "/local"),
+                concat!($expression, "/origin"),
+                tatlin::origin::run,
                 &nspawn(),
                 &nspawner(),
                 &nworker(),
@@ -113,7 +114,7 @@ criterion_group!(
         .warm_up_time(Duration::from_secs(5))
         .with_measurement(tokiobench::monitor::metrics::StealOpsMeasurement { rt: alloc_box() });
 
-    targets = line::local
+    targets = line::origin
 );
 
 criterion_main!(benches);

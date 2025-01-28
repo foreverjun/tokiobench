@@ -9,7 +9,14 @@ use tokiobench::bench::tatlin;
 
 use tokiobench::rt;
 
-fn bench(name: &str, nspawn: &[usize], nspawner: &[usize], nworker: &[usize], c: &mut Criterion) {
+fn bench(
+    name: &str,
+    fun: tatlin::Bench,
+    nspawn: &[usize],
+    nspawner: &[usize],
+    nworker: &[usize],
+    c: &mut Criterion,
+) {
     let (tx, rx) = mpsc::sync_channel(1);
     let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
@@ -22,11 +29,10 @@ fn bench(name: &str, nspawn: &[usize], nspawner: &[usize], nworker: &[usize], c:
         group.bench_function(
             format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
             |b| {
-                let hs = tatlin::mk_handles(nspawner, nspawn);
-                b.iter_reuse(hs, |(root_hs, leaf_hs)| {
+                b.iter(|| {
                     let _guard = rt.enter();
 
-                    tatlin::run(nspawner, nspawn, tx.clone(), root_hs, leaf_hs);
+                    fun(nspawner, nspawn, tx.clone());
                     rx.recv().unwrap()
                 });
             },
@@ -40,14 +46,26 @@ fn nworker() -> Vec<usize> {
 }
 
 fn nspawner() -> Vec<usize> {
-    (1..=60).collect()
+    (1..=20).collect()
 }
 
 macro_rules! benches {
     ($expression:tt) => {
-        pub fn local(c: &mut Criterion) {
+        pub fn origin(c: &mut Criterion) {
             bench(
-                concat!($expression, "/local"),
+                concat!($expression, "/origin"),
+                tatlin::origin::run,
+                &nspawn(),
+                &nspawner(),
+                &nworker(),
+                c,
+            )
+        }
+
+        pub fn cleaned(c: &mut Criterion) {
+            bench(
+                concat!($expression, "/cleaned"),
+                tatlin::cleaned::run,
                 &nspawn(),
                 &nspawner(),
                 &nworker(),
@@ -84,7 +102,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(100))
         .warm_up_time(Duration::from_secs(5));
 
-    targets = line::local
+    targets = line::origin, line::cleaned
 );
 
 criterion_main!(benches);
