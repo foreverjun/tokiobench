@@ -8,32 +8,49 @@ use itertools::iproduct;
 use tokiobench::bench::tatlin;
 
 use tokiobench::rt;
+use tokiobench::split::Split;
 
 fn bench(
     name: &str,
     fun: tatlin::Bench,
     nspawn: &[usize],
-    nspawner: &[usize],
+    nspawner_total: &[usize],
     nworker: &[usize],
+    nruntime: &[usize],
     c: &mut Criterion,
 ) {
-    let (tx, rx) = mpsc::sync_channel(1);
     let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
-    for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-        let rt = rt::new(nworker, 1);
+    for (&nspawn, &nspawner_total, &nworker, &nruntime) in iproduct!(nspawn, nspawner_total, nworker, nruntime) {
+        let runtimes: Vec<_> = (0..nruntime).map(|_| rt::new(nworker, 1)).collect();
 
-        group.throughput(Throughput::Elements((nspawn * nspawner) as u64));
+        let mut txs = Vec::with_capacity(nruntime);
+        let mut rxs = Vec::with_capacity(nruntime);
+        for _ in 0..nruntime {
+            let (tx, rx) = mpsc::sync_channel(1);
+            txs.push(tx);
+            rxs.push(rx);
+        }
+
+        let nspawners: Vec<_> = Split::new(nspawner_total, nruntime).collect();
+
+        group.throughput(Throughput::Elements((nspawn * nspawner_total) as u64));
         group.sampling_mode(criterion::SamplingMode::Linear);
 
         group.bench_function(
-            format!("nworker({nworker})/nspawner({nspawner})/nspawn({nspawn})"),
+            format!("nruntime({nruntime})/nworker({nworker})/nspawner({nspawner_total})/nspawn({nspawn})"),
             |b| {
                 b.iter(|| {
-                    let _guard = rt.enter();
+                    for i in 0..nruntime {
+                        let tx = txs[i].clone();
+                        let nspawner = nspawners[i];
 
-                    fun(nspawner, nspawn, tx.clone());
-                    rx.recv().unwrap()
+                        runtimes[i].spawn(async move { fun(nspawner, nspawn, tx) });
+                    }
+
+                    for rx in rxs.iter() {
+                        rx.recv().unwrap()
+                    }
                 });
             },
         );
@@ -42,11 +59,15 @@ fn bench(
 }
 
 fn nworker() -> Vec<usize> {
-    vec![1, 2, 4, 8, 12]
+    vec![1, 2, 4, 8]
 }
 
 fn nspawner() -> Vec<usize> {
-    (1..=20).collect()
+    (1..=10).map(|i| i * 16).collect()
+}
+
+fn runtimes() -> Vec<usize> {
+    vec![1, 2, 4]
 }
 
 macro_rules! benches {
@@ -58,6 +79,7 @@ macro_rules! benches {
                 &nspawn(),
                 &nspawner(),
                 &nworker(),
+                &runtimes(),
                 c,
             )
         }
@@ -69,6 +91,7 @@ macro_rules! benches {
                 &nspawn(),
                 &nspawner(),
                 &nworker(),
+                &runtimes(),
                 c,
             )
         }
@@ -89,7 +112,7 @@ pub mod line {
     use super::*;
 
     fn nspawn() -> Vec<usize> {
-        vec![5000]
+        vec![1000]
     }
 
     benches! {"line"}
@@ -102,7 +125,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(100))
         .warm_up_time(Duration::from_secs(5));
 
-    targets = line::origin, line::cleaned
+    targets = line::origin
 );
 
 criterion_main!(benches);

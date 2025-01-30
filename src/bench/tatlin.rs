@@ -5,6 +5,10 @@ use std::hint::black_box;
 
 pub type Bench = fn(usize, usize, SyncSender<()>);
 
+pub mod buffered {
+    // todo!
+}
+
 pub mod cleaned {
     use super::*;
 

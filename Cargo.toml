@@ -26,6 +26,10 @@ harness = false
 name = "steal"
 harness = false
 
+[[bench]]
+name = "multi"
+harness = false
+
 [features]
 full = []
 check = []

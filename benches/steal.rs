@@ -51,7 +51,7 @@ fn bench(
         group.sampling_mode(criterion::SamplingMode::Linear);
 
         group.bench_function(
-            format!("nspawn({nspawn})/nspawner({nspawner})/nworker({nworker})"),
+            format!("nworker({nworker})/nspawner({nspawner})/nspawn({nspawn})"),
             |b| {
                 b.iter(|| {
                     fun(nspawner, nspawn, tx.clone());
