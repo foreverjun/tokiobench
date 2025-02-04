@@ -21,7 +21,9 @@ fn bench(
 ) {
     let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
-    for (&nspawn, &nspawner_total, &nworker, &nruntime) in iproduct!(nspawn, nspawner_total, nworker, nruntime) {
+    for (&nspawn, &nspawner_total, &nworker, &nruntime) in
+        iproduct!(nspawn, nspawner_total, nworker, nruntime)
+    {
         let runtimes: Vec<_> = (0..nruntime).map(|_| rt::new(nworker, 1)).collect();
 
         let mut txs = Vec::with_capacity(nruntime);
