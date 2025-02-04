@@ -5,52 +5,48 @@ use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use itertools::iproduct;
-use tokiobench::bench::tatlin;
 
+use tokiobench::bench::tatlin;
 use tokiobench::rt;
-use tokiobench::split::Split;
+use tokiobench::split::EqSplit;
 
 fn bench(
     name: &str,
     fun: tatlin::Bench,
     nspawn: &[usize],
-    nspawner_total: &[usize],
+    nspawner: &[usize],
     nworker: &[usize],
     nruntime: &[usize],
     c: &mut Criterion,
 ) {
     let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
-    for (&nspawn, &nspawner_total, &nworker, &nruntime) in
-        iproduct!(nspawn, nspawner_total, nworker, nruntime)
+    for (&nspawn, &nspawner, &nworker, &nruntime) in iproduct!(nspawn, nspawner, nworker, nruntime)
     {
-        let runtimes: Vec<_> = (0..nruntime).map(|_| rt::new(nworker, 1)).collect();
+        let nspawner_p_rt = EqSplit::new(nspawner, nruntime).item();
+        let nworker_p_rt = EqSplit::new(nworker, nruntime).item();
 
-        let mut txs = Vec::with_capacity(nruntime);
-        let mut rxs = Vec::with_capacity(nruntime);
-        for _ in 0..nruntime {
+        let rt_rx_tx: Vec<_> = (0..nruntime).map(|_| {
+            let rt = rt::new(nworker_p_rt, 1);
             let (tx, rx) = mpsc::sync_channel(1);
-            txs.push(tx);
-            rxs.push(rx);
-        }
 
-        let nspawners: Vec<_> = Split::new(nspawner_total, nruntime).collect();
+            (rt, tx, rx)
+        }).collect();
 
-        group.throughput(Throughput::Elements((nspawn * nspawner_total) as u64));
+        group.throughput(Throughput::Elements((nspawn * nspawner) as u64));
         group.sampling_mode(criterion::SamplingMode::Linear);
 
         group.bench_function(
-            format!("nruntime({nruntime})/nworker({nworker})/nspawner({nspawner_total})/nspawn({nspawn})"),
+            format!("nruntime({nruntime})/nworker({nworker_p_rt})/nspawner({nspawner_p_rt})/nspawn({nspawn})",
+                ),
             |b| {
                 b.iter(|| {
-                    for i in 0..nruntime {
-                        let tx = txs[i].clone();
-                        let nspawner = nspawners[i];
-
-                        runtimes[i].spawn(async move { fun(nspawner, nspawn, tx) });
+                    for (rt, tx, _) in rt_rx_tx.iter() {
+                        let tx = tx.clone();
+                        rt.spawn(async move { fun(nspawner_p_rt, nspawn, tx) });
                     }
 
-                    for rx in rxs.iter() {
+                    for (_, _, rx) in rt_rx_tx.iter() {
                         rx.recv().unwrap()
                     }
                 });
@@ -61,7 +57,7 @@ fn bench(
 }
 
 fn nworker() -> Vec<usize> {
-    vec![1, 2, 4, 8]
+    vec![48]
 }
 
 fn nspawner() -> Vec<usize> {
@@ -69,7 +65,7 @@ fn nspawner() -> Vec<usize> {
 }
 
 fn runtimes() -> Vec<usize> {
-    vec![1, 2, 4]
+    vec![1, 2, 4, 8, 16]
 }
 
 macro_rules! benches {
@@ -98,16 +94,6 @@ macro_rules! benches {
             )
         }
     };
-}
-
-pub mod scatter {
-    use super::*;
-
-    fn nspawn() -> Vec<usize> {
-        (1..=50).map(|i| i * 1000).collect()
-    }
-
-    benches! {"scatter"}
 }
 
 pub mod line {
