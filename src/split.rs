@@ -9,12 +9,11 @@ impl Split {
     pub fn new(all: usize, peaces: usize) -> Split {
         assert!(peaces != 0 && all != 0, "attempt to split {all} / {peaces}");
 
-        let res = Split {
+        Split {
             remaining: all,
             step_remain: peaces,
             div: usize::max(all / peaces, 1),
-        };
-        return res;
+        }
     }
 }
 
@@ -24,7 +23,7 @@ impl Iterator for Split {
     fn next(&mut self) -> Option<Self::Item> {
         match () {
             () if self.step_remain == 0 && self.remaining == 0 => {
-                return None;
+                None
             }
             // last step, let's throw all values
             () if self.step_remain == 1 => {
@@ -33,7 +32,7 @@ impl Iterator for Split {
                 self.remaining = 0;
                 self.step_remain = 0;
 
-                return Some(result);
+                Some(result)
             }
             () => {
                 let result = usize::min(self.div, self.remaining);
@@ -41,7 +40,7 @@ impl Iterator for Split {
                 self.remaining -= result;
                 self.step_remain -= 1;
 
-                return Some(result);
+                Some(result)
             }
         }
     }
@@ -110,7 +109,7 @@ impl EqSplit {
 
         EqSplit {
             remain: peaces,
-            val: val,
+            val,
         }
     }
 
@@ -128,7 +127,7 @@ impl Iterator for EqSplit {
             return Some(self.val);
         }
 
-        return None;
+        None
     }
 }
 

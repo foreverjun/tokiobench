@@ -121,7 +121,9 @@ pub mod origin {
     }
 
     async fn task_type_2(data: Arc<Vec<u8>>) {
-        black_box(drop(black_box(data)));
+        black_box(());
+        drop(black_box(data));
+        black_box(());
     }
 
     pub fn run(nspawner: usize, nspawn: usize, tx: SyncSender<()>) {
