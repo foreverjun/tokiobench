@@ -34,15 +34,10 @@ def main():
 
     lpath.Path(p.RESULT_PATH).mkdir(mode=0o777, parents=True, exist_ok=True)
 
-    if args.bscatter:
-        bench.nspawn_nspawner_scatter()
-        bench.nspawn_nspawner_nworker_scatters()
-
     if args.bline:
-        bench.nspawn_nspawner_nworker_line()
+        bench.run()
 
     if args.mtotal:
-        # metrics.run_sum_total()
         metrics.run_total_steal_ops()
 
     if args.msampling:
