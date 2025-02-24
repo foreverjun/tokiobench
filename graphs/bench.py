@@ -2,13 +2,9 @@ import json
 import pathlib as lpath
 import re
 from pathlib import Path
-
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 import params as p
-
-sns.set_theme()
 
 def dirs() -> list[lpath.Path]:
     return list(p.CRITERION_PATH.glob("*"))
@@ -38,18 +34,11 @@ def fetch() -> list[Frame]:
             thrpt = (benchmark_json["throughput"]["Elements"] / estimates_json["mean"]["point_estimate"]) * 10 ** 9
             name = benchmark_json["function_id"]
 
-            # example: nspawn(1000)/nspawner(1)/nworker(4)
-            name_pattern = re.compile(r"nruntime\((\d+)\)/nworker\((\d+)\)/nspawner\((\d+)\)/nspawn\((\d+)\)")
-            match = name_pattern.match(name)
-
-            nruntime = int(match.group(1))
-            nworker_p_rt = int(match.group(2))
-            nspawner_p_rt = int(match.group(3))
-
+            match = re.compile(r"nruntime\((\d+)\)/nworker\((\d+)\)/nspawner\((\d+)\)/nspawn\((\d+)\)").match(name)
             data.append({
-                "nruntime": nruntime,
-                "nworker": nworker_p_rt * nruntime,
-                "nspawner": nspawner_p_rt * nruntime,
+                "nruntime": int(match.group(1)),
+                "nworker": int(match.group(2)),
+                "nspawner": int(match.group(3)),
                 "nspawn": int(match.group(4)),
                 "thrpt": thrpt,
                 "name": d.name
@@ -87,7 +76,7 @@ def plot(*, path: lpath.Path, frames: list[Frame]):
         assert isinstance(nspawn, int)
         print("plotting for nspawn:", nspawn)
 
-        for nruntime, frames in group_by(frames, "nruntime").items():
+        for nruntime, frames in sorted(group_by(frames, "nruntime").items(), key=lambda x: x[0]):
             assert isinstance(nruntime, int)
             print("plotting for nruntime:", nruntime)
 

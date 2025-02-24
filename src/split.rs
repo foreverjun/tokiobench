@@ -22,9 +22,7 @@ impl Iterator for Split {
 
     fn next(&mut self) -> Option<Self::Item> {
         match () {
-            () if self.step_remain == 0 && self.remaining == 0 => {
-                None
-            }
+            () if self.step_remain == 0 && self.remaining == 0 => None,
             // last step, let's throw all values
             () if self.step_remain == 1 => {
                 let result = self.remaining;
@@ -51,7 +49,7 @@ mod split_tests {
     use super::*;
 
     fn check(count: usize, div: usize, expected: &[usize]) {
-        let result: Vec<usize> = Split::new(count, div).into_iter().collect();
+        let result: Vec<usize> = Split::new(count, div).collect();
         let exp_sum: usize = expected.iter().sum();
 
         assert_eq!(count, exp_sum, "sum must be equal");
@@ -136,7 +134,7 @@ mod eq_split_tests {
     use super::*;
 
     fn check(count: usize, div: usize, expected: &[usize]) {
-        let result: Vec<usize> = EqSplit::new(count, div).into_iter().collect();
+        let result: Vec<usize> = EqSplit::new(count, div).collect();
         let exp_sum: usize = expected.iter().sum();
 
         assert_eq!(count, exp_sum, "sum must be equal");

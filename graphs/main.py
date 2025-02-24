@@ -4,7 +4,6 @@ import argparse
 import params as p
 
 import bench
-import metrics
 
 def main():
     parser = argparse.ArgumentParser(
@@ -36,12 +35,6 @@ def main():
 
     if args.bline:
         bench.run()
-
-    if args.mtotal:
-        metrics.run_total_steal_ops()
-
-    if args.msampling:
-        metrics.run_sampling()
 
 if __name__ == "__main__":
     main()

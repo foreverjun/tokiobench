@@ -23,21 +23,23 @@ fn bench(
 
     for (&nspawn, &nspawner, &nworker, &nruntime) in iproduct!(nspawn, nspawner, nworker, nruntime)
     {
-        let nspawner_p_rt = EqSplit::new(nspawner, nruntime).item();
-        let nworker_p_rt = EqSplit::new(nworker, nruntime).item();
-
-        let rt_rx_tx: Vec<_> = (0..nruntime).map(|_| {
-            let rt = rt::new(nworker_p_rt, 1);
-            let (tx, rx) = mpsc::sync_channel(1);
-
-            (rt, tx, rx)
-        }).collect();
-
         group.throughput(Throughput::Elements((nspawn * nspawner) as u64));
         group.sampling_mode(criterion::SamplingMode::Linear);
 
+        let nspawner_p_rt = EqSplit::new(nspawner, nruntime).item();
+        let nworker_p_rt = EqSplit::new(nworker, nruntime).item();
+
+        let rt_rx_tx: Vec<_> = (0..nruntime)
+            .map(|_| {
+                let rt = rt::new(nworker_p_rt, 1);
+                let (tx, rx) = mpsc::sync_channel(1);
+
+                (rt, tx, rx)
+            })
+            .collect();
+
         group.bench_function(
-            format!("nruntime({nruntime})/nworker({nworker_p_rt})/nspawner({nspawner_p_rt})/nspawn({nspawn})",
+            format!("nruntime({nruntime})/nworker({nworker})/nspawner({nspawner})/nspawn({nspawn})",
                 ),
             |b| {
                 b.iter(|| {
@@ -57,15 +59,15 @@ fn bench(
 }
 
 fn nworker() -> Vec<usize> {
-    vec![48]
+    vec![24]
 }
 
 fn nspawner() -> Vec<usize> {
     (1..=10).map(|i| i * 16).collect()
 }
 
-fn runtimes() -> Vec<usize> {
-    vec![1, 2, 4, 8, 16]
+fn nruntime() -> Vec<usize> {
+    vec![1, 2, 4, 8]
 }
 
 macro_rules! benches {
@@ -77,19 +79,7 @@ macro_rules! benches {
                 &nspawn(),
                 &nspawner(),
                 &nworker(),
-                &runtimes(),
-                c,
-            )
-        }
-
-        pub fn cleaned(c: &mut Criterion) {
-            bench(
-                concat!($expression, "/cleaned"),
-                tatlin::cleaned::run,
-                &nspawn(),
-                &nspawner(),
-                &nworker(),
-                &runtimes(),
+                &nruntime(),
                 c,
             )
         }
