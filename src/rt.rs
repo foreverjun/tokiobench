@@ -14,10 +14,6 @@ pub fn new(nworker: usize, bloking: usize) -> Runtime {
     runtime::Builder::new_multi_thread()
         .max_blocking_threads(bloking)
         .worker_threads(nworker)
-        .on_thread_start(move || {
-            affinity::set_thread_affinity(&cores)
-                .expect("affinity setting...");
-        })
         .thread_keep_alive(Duration::from_secs(10_000))
         .build()
         .unwrap()
