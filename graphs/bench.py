@@ -89,6 +89,7 @@ def plot(*, path: lpath.Path, frames: list[Frame]):
         plt.ylabel("Throughput (task / s)")
 
         plt.savefig(path / f"line_{nspawn}")
+        plt.savefig(path / f"line_{nspawn}_transparent", transparent=True)
         plt.close()
 
 def run():
