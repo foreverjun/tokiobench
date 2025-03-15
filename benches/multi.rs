@@ -12,7 +12,6 @@ use tokiobench::split::EqSplit;
 
 fn bench(
     name: &str,
-    fun: tatlin::Bench,
     nspawn: &[usize],
     nspawner: &[usize],
     nworker: &[usize],
@@ -31,7 +30,7 @@ fn bench(
 
         let rt_rx_tx: Vec<_> = (0..nruntime)
             .map(|_| {
-                let rt = rt::new(nworker_p_rt, 1);
+                let rt = rt::new_ref(nworker_p_rt, 1);
                 let (tx, rx) = mpsc::sync_channel(1);
 
                 (rt, tx, rx)
@@ -39,13 +38,14 @@ fn bench(
             .collect();
 
         group.bench_function(
-            format!("nruntime({nruntime})/nworker({nworker})/nspawner({nspawner})/nspawn({nspawn})",
-                ),
+            format!(
+                "nruntime({nruntime})/nworker({nworker})/nspawner({nspawner})/nspawn({nspawn})",
+            ),
             |b| {
                 b.iter(|| {
                     for (rt, tx, _) in rt_rx_tx.iter() {
                         let tx = tx.clone();
-                        rt.spawn(async move { fun(nspawner_p_rt, nspawn, tx) });
+                        rt.spawn(async move { tatlin::reference::run(nspawner_p_rt, nspawn, tx) });
                     }
 
                     for (_, _, rx) in rt_rx_tx.iter() {
@@ -75,7 +75,6 @@ macro_rules! benches {
         pub fn origin(c: &mut Criterion) {
             bench(
                 concat!($expression, "/origin"),
-                tatlin::origin::run,
                 &nspawn(),
                 &nspawner(),
                 &nworker(),

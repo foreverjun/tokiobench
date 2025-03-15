@@ -5,35 +5,46 @@ use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use itertools::iproduct;
-use tokiobench::bench::tatlin;
 
+use tokiobench::bench::tatlin;
 use tokiobench::rt;
+use tokiobench::split::EqSplit;
 
 fn bench(
     name: &str,
-    fun: tatlin::Bench,
     nspawn: &[usize],
     nspawner: &[usize],
     nworker: &[usize],
+    ngroup: &[usize],
     c: &mut Criterion,
 ) {
-    let (tx, rx) = mpsc::sync_channel(1);
     let mut group = c.benchmark_group(format!("tatlin/{name}"));
 
-    for (&nspawn, &nspawner, &nworker) in iproduct!(nspawn, nspawner, nworker) {
-        let rt = rt::new(nworker, 1);
-
+    for (&nspawn, &nspawner, &nworker, &ngroup) in iproduct!(nspawn, nspawner, nworker, ngroup) {
         group.throughput(Throughput::Elements((nspawn * nspawner) as u64));
         group.sampling_mode(criterion::SamplingMode::Linear);
 
+        let nspawner_p_group = EqSplit::new(nspawner, ngroup).item();
+        let nworker_p_group = EqSplit::new(nworker, ngroup).item();
+        let rt = rt::new_shard(nworker_p_group, ngroup, 1);
+
+        let rx_tx: Vec<_> = (0..ngroup).map(|_| mpsc::sync_channel(1)).collect();
+
         group.bench_function(
-            format!("nworker({nworker})/nspawner({nspawner})/nspawn({nspawn})"),
+            format!("ngroup({ngroup})/nworker({nworker})/nspawner({nspawner})/nspawn({nspawn})",),
             |b| {
                 b.iter(|| {
-                    let _guard = rt.enter();
+                    for (group, (tx, _)) in rx_tx.iter().enumerate() {
+                        let tx = tx.clone();
+                        rt.spawn_into(
+                            async move { tatlin::sharded::run(nspawner_p_group, nspawn, tx) },
+                            group,
+                        );
+                    }
 
-                    fun(nspawner, nspawn, tx.clone());
-                    rx.recv().unwrap()
+                    for (_, rx) in rx_tx.iter() {
+                        rx.recv().unwrap()
+                    }
                 });
             },
         );
@@ -41,38 +52,31 @@ fn bench(
     group.finish();
 }
 
-
 fn nworker() -> Vec<usize> {
-    vec![1, 2, 4, 8, 12]
+    vec![24]
 }
 
 fn nspawner() -> Vec<usize> {
-    (1..=20).collect()
+    (1..=10).map(|i| i * 16).collect()
+}
+
+fn nruntime() -> Vec<usize> {
+    vec![1, 2, 4, 8]
 }
 
 macro_rules! benches {
     ($expression:tt) => {
-        pub fn origin(c: &mut Criterion) {
+        pub fn sharded(c: &mut Criterion) {
             bench(
                 concat!($expression, "/origin"),
-                tatlin::origin::run,
                 &nspawn(),
                 &nspawner(),
                 &nworker(),
+                &nruntime(),
                 c,
             )
         }
     };
-}
-
-pub mod scatter {
-    use super::*;
-
-    fn nspawn() -> Vec<usize> {
-        (1..=50).map(|i| i * 1000).collect()
-    }
-
-    benches! {"scatter"}
 }
 
 pub mod line {
@@ -92,7 +96,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(100))
         .warm_up_time(Duration::from_secs(5));
 
-    targets = line::origin
+    targets = line::sharded
 );
 
 criterion_main!(benches);
