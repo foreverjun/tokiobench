@@ -1,6 +1,0 @@
-[submodule "tokio-metrics"]
-	path = tokio-metrics
-	url = https://github.com/IgorErin/tokio-metrics.git
-[submodule "tokio"]
-	path = tokio
-	url = https://github.com/IgorErin/tokio.git
