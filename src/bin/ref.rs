@@ -6,6 +6,6 @@ fn main() {
     let _guard = rt.enter();
     let (tx, rx) = mpsc::sync_channel(1);
 
-    tokiobench::bench::tatlin::reference::run(16, 1000, tx);
+    tokiobench::bench::tatlin::reference::run(2, 1000, tx);
     rx.recv().unwrap();
 }

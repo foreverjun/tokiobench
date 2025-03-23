@@ -29,6 +29,7 @@ fn bench(
         let rt = rt::new_shard(nworker_p_group, ngroup, 1);
 
         let rx_tx: Vec<_> = (0..ngroup).map(|_| mpsc::sync_channel(1)).collect();
+        let _guard = rt.enter();
 
         group.bench_function(
             format!("ngroup({ngroup})/nworker({nworker})/nspawner({nspawner})/nspawn({nspawn})",),
@@ -36,10 +37,7 @@ fn bench(
                 b.iter(|| {
                     for (group, (tx, _)) in rx_tx.iter().enumerate() {
                         let tx = tx.clone();
-                        rt.spawn_into(
-                            async move { tatlin::sharded::run(nspawner_p_group, nspawn, tx) },
-                            group,
-                        );
+                        tatlin::sharded::run(nspawner_p_group, nspawn, tx, group);
                     }
 
                     for (_, rx) in rx_tx.iter() {

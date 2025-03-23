@@ -29,7 +29,3 @@ harness = false
 [[bench]]
 name = "group"
 harness = false
-
-[[bench]]
-name = "compare"
-harness = false
