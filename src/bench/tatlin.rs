@@ -42,7 +42,7 @@ pub mod sharded {
         let data = Arc::new(black_box(vec![1u8; 1_000_000]));
         future::join_all(
             (0..black_box(nspawn))
-                .map(|_| tokio_shard::spawn(black_box(task_type_2(Arc::clone(&data))))),
+                .map(|_| tokio_groups::spawn(black_box(task_type_2(Arc::clone(&data))))),
         )
         .await;
     }
@@ -52,11 +52,11 @@ pub mod sharded {
     }
 
     pub fn run(nspawner: usize, nspawn: usize, tx: SyncSender<()>, group: usize) {
-        tokio_shard::spawn_into(
+        tokio_groups::spawn_into(
             async move {
                 future::join_all(
                     (0..black_box(nspawner))
-                        .map(|_| tokio_shard::spawn_into(black_box(task_type_1(nspawn)), group)),
+                        .map(|_| tokio_groups::spawn_into(black_box(task_type_1(nspawn)), group)),
                 )
                 .await;
 

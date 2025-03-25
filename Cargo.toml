@@ -5,7 +5,9 @@ edition = "2021"
 
 [dependencies]
 tokio_ref = { git = "https://github.com/IgorErin/tokio", branch = "master", package = "tokio", features = ["full"] }
-tokio_shard = { git = "https://github.com/IgorErin/tokio", branch = "iea/group-sharded", package = "tokio", features = ["full"] }
+tokio_groups = { git = "https://github.com/IgorErin/tokio", branch = "iea/group-sharded", package = "tokio", features = ["full"] }
+tokio_id = { git = "https://github.com/IgorErin/tokio", branch = "iea/id-sharded", package = "tokio", features = ["full"] }
+
 criterion = { git = "https://github.com/IgorErin/criterion.rs", branch = "iea/iter_reuse" }
 itertools = "0.13.0"
 serde = "1.0.215"
