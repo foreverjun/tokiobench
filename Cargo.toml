@@ -31,3 +31,7 @@ harness = false
 [[bench]]
 name = "group"
 harness = false
+
+[[bench]]
+name = "spawner"
+harness = false
