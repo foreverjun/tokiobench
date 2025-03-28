@@ -706,7 +706,24 @@ dependencies = [
 [[package]]
 name = "tokio"
 version = "1.43.0"
-source = "git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-sharded#80fc0d5e0ed373fb1a97c307dce2566c307fea53"
+source = "git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-fixed#e8e1ccbdde7789ece49547def8d97b8bdb23a157"
+dependencies = [
+ "backtrace",
+ "bytes",
+ "libc",
+ "mio",
+ "parking_lot",
+ "pin-project-lite",
+ "signal-hook-registry",
+ "socket2",
+ "tokio-macros 2.5.0 (git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-fixed)",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "tokio"
+version = "1.43.0"
+source = "git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-sharded#69ff5c2601f7ca26d98ebaead17fc3b6d775378d"
 dependencies = [
  "backtrace",
  "bytes",
@@ -757,7 +774,17 @@ dependencies = [
 [[package]]
 name = "tokio-macros"
 version = "2.5.0"
-source = "git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-sharded#80fc0d5e0ed373fb1a97c307dce2566c307fea53"
+source = "git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-fixed#e8e1ccbdde7789ece49547def8d97b8bdb23a157"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.5.0"
+source = "git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-sharded#69ff5c2601f7ca26d98ebaead17fc3b6d775378d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -796,6 +823,7 @@ dependencies = [
  "lazy_static",
  "serde",
  "serde_json",
+ "tokio 1.43.0 (git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-fixed)",
  "tokio 1.43.0 (git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-sharded)",
  "tokio 1.43.0 (git+https://github.com/IgorErin/tokio?branch=iea%2Fid-sharded)",
  "tokio 1.43.0 (git+https://github.com/IgorErin/tokio?branch=master)",

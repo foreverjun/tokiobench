@@ -4,6 +4,7 @@ import argparse
 import params as p
 
 import bench
+import group
 
 def main():
     parser = argparse.ArgumentParser(
@@ -34,7 +35,9 @@ def main():
     lpath.Path(p.RESULT_PATH).mkdir(mode=0o777, parents=True, exist_ok=True)
 
     if args.bline:
+        print("bline taken")
         bench.run()
+        group.run()
 
 if __name__ == "__main__":
     main()

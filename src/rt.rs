@@ -15,10 +15,11 @@ pub fn new_shard(nworker: usize, ngroup: usize, nbloking: usize) -> tokio_groups
         .unwrap()
 }
 
-pub fn new_id(nworker: usize, nbloking: usize) -> tokio_id::runtime::Runtime {
-    tokio_id::runtime::Builder::new_multi_thread()
+pub fn new_fixed(nworker: usize, ngroup: usize, nbloking: usize) -> tokio_fixed::runtime::Runtime {
+    tokio_fixed::runtime::Builder::new_multi_thread()
         .max_blocking_threads(nbloking)
         .worker_threads(nworker)
+        .worker_groups(ngroup)
         .build()
         .unwrap()
 }
