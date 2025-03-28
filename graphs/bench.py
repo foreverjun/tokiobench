@@ -16,13 +16,13 @@ Frame = dict[str, int | str, Path]
 
 def fetch() -> list[Frame]:
     dir_pattern = re.compile(r"nruntime\((\d+)\)_nworker\((\d+)\)_nspawner\((\d+)\)_nspawn\((\d+)\)")
+
+    data = []
     for d in dirs():
         bench_paths = [f for f in d.glob("*") if f.is_dir() and dir_pattern.match(f.name)]
 
         if len(bench_paths) == 0:
             continue
-
-        data = []
 
         for bench in bench_paths:
             estp_path = bench / "new" / "estimates.json"

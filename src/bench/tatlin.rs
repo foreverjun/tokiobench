@@ -38,11 +38,12 @@ pub mod sharded {
     use futures::future;
     use std::sync::Arc;
 
-    async fn task_type_1(nspawn: usize) {
+    async fn task_type_1(nspawn: usize, group: usize) {
         let data = Arc::new(black_box(vec![1u8; 1_000_000]));
         future::join_all(
-            (0..black_box(nspawn))
-                .map(|_| tokio_groups::spawn(black_box(task_type_2(Arc::clone(&data))))),
+            (0..black_box(nspawn)).map(|_| {
+                tokio_groups::spawn_into(group, black_box(task_type_2(Arc::clone(&data))))
+            }),
         )
         .await;
     }
@@ -52,17 +53,15 @@ pub mod sharded {
     }
 
     pub fn run(nspawner: usize, nspawn: usize, tx: SyncSender<()>, group: usize) {
-        tokio_groups::spawn_into(
-            async move {
-                future::join_all(
-                    (0..black_box(nspawner))
-                        .map(|_| tokio_groups::spawn_into(black_box(task_type_1(nspawn)), group)),
-                )
-                .await;
+        tokio_groups::spawn_into(group, async move {
+            future::join_all(
+                (0..black_box(nspawner)).map(|_| {
+                    tokio_groups::spawn_into(group, black_box(task_type_1(nspawn, group)))
+                }),
+            )
+            .await;
 
-                tx.send(()).unwrap()
-            },
-            group,
-        );
+            tx.send(()).unwrap()
+        });
     }
 }

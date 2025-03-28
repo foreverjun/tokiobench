@@ -384,9 +384,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.26"
+version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
+checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
 name = "memchr"
@@ -434,9 +434,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.21.1"
+version = "1.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d75b0bedcc4fe52caa0e03d9f1151a323e4aa5e2d78ba3580400cd3c9e2bc4bc"
+checksum = "c2806eaa3524762875e21c3dcd057bc4b7bfa01ce4da8d46be1cd43649e1cc6b"
 
 [[package]]
 name = "oorandom"
@@ -706,7 +706,7 @@ dependencies = [
 [[package]]
 name = "tokio"
 version = "1.43.0"
-source = "git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-sharded#771cc56d9bd0d246c5f16f0f27a7ec09132ab55a"
+source = "git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-sharded#80fc0d5e0ed373fb1a97c307dce2566c307fea53"
 dependencies = [
  "backtrace",
  "bytes",
@@ -757,7 +757,7 @@ dependencies = [
 [[package]]
 name = "tokio-macros"
 version = "2.5.0"
-source = "git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-sharded#771cc56d9bd0d246c5f16f0f27a7ec09132ab55a"
+source = "git+https://github.com/IgorErin/tokio?branch=iea%2Fgroup-sharded#80fc0d5e0ed373fb1a97c307dce2566c307fea53"
 dependencies = [
  "proc-macro2",
  "quote",
