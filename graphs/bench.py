@@ -88,6 +88,8 @@ def plot(*, path: lpath.Path, frames: list[Frame]):
         plt.xlabel("Number of spawners")
         plt.ylabel("Throughput (task / s)")
 
+        plt.gca().ticklabel_format(axis='y', style='plain')
+
         plt.savefig(path / f"line_{nspawn}")
         plt.savefig(path / f"line_{nspawn}_transparent", transparent=True)
         plt.close()
