@@ -2,7 +2,7 @@ use std::sync::mpsc;
 use tokiobench::rt;
 
 fn main() {
-    let rt = rt::new_shard(10, 2, 1);
+    let rt = rt::new_shard(6, 2, 1);
     let _guard = rt.enter();
     let (tx, rx) = mpsc::sync_channel(1);
 
