@@ -31,7 +31,7 @@ def fetch() -> list[Frame]:
             estimates_json = json.load(estp_path.open())
             benchmark_json = json.load(bpath_path.open())
 
-            thrpt = (benchmark_json["throughput"]["Elements"] / estimates_json["mean"]["point_estimate"]) * 10 ** 9
+            thrpt = (benchmark_json["throughput"]["Elements"] / estimates_json["median"]["point_estimate"]) * 10 ** 9
             name = benchmark_json["function_id"]
 
             match = re.compile(r"nruntime\((\d+)\)/nworker\((\d+)\)/nspawner\((\d+)\)/nspawn\((\d+)\)").match(name)
