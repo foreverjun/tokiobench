@@ -23,5 +23,5 @@ jobs:
           submodules: recursive
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
 
-      - run: cargo bench --verbose -F check --no-run
+      - run: cargo bench --verbose --no-run
       - run: cargo test --verbose
