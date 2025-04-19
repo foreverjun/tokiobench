@@ -55,7 +55,7 @@ fn nworker() -> Vec<usize> {
 }
 
 fn nspawner() -> Vec<usize> {
-    (1..=10).map(|i| i * 16).collect()
+    vec![8, 16, 32, 48]
 }
 
 fn nruntime() -> Vec<usize> {
@@ -90,7 +90,7 @@ pub mod line {
 criterion_group!(
     name = benches;
     config = Criterion::default()
-        .sample_size(100)
+        .sample_size(40)
         .measurement_time(Duration::from_secs(100))
         .warm_up_time(Duration::from_secs(5));
 
