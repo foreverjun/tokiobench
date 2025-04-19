@@ -26,7 +26,7 @@ fn bench(
 
         let nspawner_p_group = EqSplit::new(nspawner, ngroup).item();
         let nworker_p_group = EqSplit::new(nworker, ngroup).item();
-        let rt = rt::new_fixed(nworker_p_group, ngroup, 1);
+        let rt = rt::new_shard(nworker_p_group, ngroup, 1);
 
         let rx_tx: Vec<_> = (0..ngroup).map(|_| mpsc::sync_channel(1)).collect();
         let _guard = rt.enter();
@@ -37,7 +37,7 @@ fn bench(
                 b.iter(|| {
                     for (group, (tx, _)) in rx_tx.iter().enumerate() {
                         let tx = tx.clone();
-                        tatlin::fixed::run(nspawner_p_group, nspawn, tx, group);
+                        tatlin::sharded::run(nspawner_p_group, nspawn, tx, group);
                     }
 
                     for (_, rx) in rx_tx.iter() {

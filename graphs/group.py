@@ -92,6 +92,33 @@ def plot(*, path: lpath.Path, frames: list[Frame]):
         plt.savefig(path / f"line_{nspawn}_transparent", transparent=True)
         plt.close()
 
+
+def report_table_print(*, path: lpath.Path, frames: list[Frame]):
+    legend = []
+
+    for nspawn, frames in group_by(frames, "nspawn").items():
+        assert isinstance(nspawn, int)
+        print("plotting for nspawn:", nspawn)
+        for nspawner, frames in group_by(frames, "nspawner").items():
+            for nruntime, frames in sorted(group_by(frames, "ngroup").items(), key=lambda x: x[0]):
+                assert isinstance(nruntime, int)
+                print("plotting for ngroup:", nruntime)
+
+                plot_line(sorted(frames, key=lambda f: f["nspawner"]))
+                legend.append(f"{nruntime} runtime")
+
+                if nspawn == 1000 and nspawner == 112:
+                    print(frames)
+
+        plt.legend(legend)
+
+        plt.xlabel("Number of spawners")
+        plt.ylabel("Throughput (task / s)")
+
+        plt.savefig(path / f"line_{nspawn}")
+        plt.savefig(path / f"line_{nspawn}_transparent", transparent=True)
+        plt.close()
+
 def run():
     print("in run")
     frames = fetch()
@@ -104,3 +131,4 @@ def run():
         path.mkdir(mode=0o777, parents=True, exist_ok=True)
 
         plot(path=path, frames=frames)
+        report_table_print(path=path, frames=frames)

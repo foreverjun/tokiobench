@@ -1,6 +1,8 @@
 use std::hint::black_box;
 use std::sync::mpsc::SyncSender;
 
+const YIELD_BOUND: usize = 1000;
+
 pub mod reference {
     use super::*;
 
@@ -17,6 +19,9 @@ pub mod reference {
     }
 
     async fn task_type_2(data: Arc<Vec<u8>>) {
+        for _ in 0..YIELD_BOUND {
+            tokio_groups::task::yield_now().await;
+        }
         drop(black_box(data));
     }
 
@@ -47,6 +52,9 @@ pub mod sharded {
     }
 
     async fn task_type_2(data: Arc<Vec<u8>>) {
+        for _ in 0..YIELD_BOUND {
+            tokio_groups::task::yield_now().await;
+        }
         drop(black_box(data));
     }
 
@@ -83,6 +91,9 @@ pub mod fixed {
     }
 
     async fn task_type_2(data: Arc<Vec<u8>>) {
+        for _ in 0..YIELD_BOUND {
+            tokio_groups::task::yield_now().await;
+        }
         drop(black_box(data));
     }
 
