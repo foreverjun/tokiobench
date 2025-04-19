@@ -4,30 +4,32 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tokio = { path = "tokio/tokio", features = ["full"] }
+tokio_ref = { git = "https://github.com/IgorErin/tokio", branch = "master", package = "tokio", features = ["full"] }
+tokio_groups = { git = "https://github.com/IgorErin/tokio", branch = "iea/group-sharded", package = "tokio", features = ["full"] }
+tokio_id = { git = "https://github.com/IgorErin/tokio", branch = "iea/id-sharded", package = "tokio", features = ["full"] }
+tokio_fixed = { git = "https://github.com/IgorErin/tokio", branch = "iea/group-fixed", package = "tokio", features = ["full"] }
+
 criterion = { git = "https://github.com/IgorErin/criterion.rs", branch = "iea/iter_reuse" }
 itertools = "0.13.0"
-tokio-metrics = { path = "tokio-metrics", features = ["rt"] }
 serde = "1.0.215"
 cfg-if = "1.0.0"
 futures = "0.3.31"
 csv = "1.3.1"
 serde_json = "1.0.134"
+lazy_static = "1.5.0"
+
+[profile.bench]
+debug = true
+inherits = "release"
 
 [lib]
 name = "tokiobench"
 path = "src/lib.rs"
 
-[[bin]]
-name = "mtatlin"
-path = "src/monitor/mtatlin.rs"
-
 [[bench]]
-name = "tatlin"
+name = "multi"
 harness = false
 
-[features]
-full = []
-check = []
-dry = []
-yield = []
+[[bench]]
+name = "group"
+harness = false

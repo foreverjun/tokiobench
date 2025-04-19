@@ -1,117 +1,111 @@
+use std::hint::black_box;
 use std::sync::mpsc::SyncSender;
 
-use cfg_if::cfg_if;
+const YIELD_BOUND: usize = 1000;
 
-use tokio::task::JoinHandle;
-
-async fn task() {
-    std::hint::black_box(());
-}
-
-pub type RootHandles = Vec<JoinHandle<Vec<JoinHandle<()>>>>;
-pub type LeafHandles = Vec<Vec<JoinHandle<()>>>;
-
-pub type Fn =
-    fn(usize, usize, SyncSender<(RootHandles, LeafHandles)>, RootHandles, LeafHandles) -> ();
-
-pub type LeafFn = fn(Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>>;
-
-fn _static_assert() {
-    let _: Fn = ch;
-    let _: LeafFn = spawn_tasks;
-}
-
-fn spawn_tasks(mut handles: Vec<JoinHandle<()>>) -> Vec<JoinHandle<()>> {
-    for _ in 0..handles.capacity() {
-        handles.push(tokio::spawn(task()))
-    }
-
-    handles
-}
-
-pub fn mk_handles(nspawner: usize, nspawn: usize) -> (RootHandles, LeafHandles) {
-    let leaf_handles = (0..nspawner)
-        .map(|_| Vec::with_capacity(nspawn))
-        .collect::<Vec<_>>();
-    let root_handles = Vec::with_capacity(nspawner);
-
-    (root_handles, leaf_handles)
-}
-
-// TODO duplication. but no call by refernce
-pub fn ch(
-    _nspawner: usize,
-    _nspawn: usize,
-    tx: SyncSender<(RootHandles, LeafHandles)>,
-    mut root_handles: RootHandles,
-    mut leaf_handles: LeafHandles,
-) {
-    cfg_if!(if #[cfg(feature = "check")] {
-        assert!(root_handles.is_empty());
-        assert!(root_handles.capacity() == _nspawner);
-
-        assert!(leaf_handles.iter().all(|i| i.is_empty() && i.capacity() == _nspawn));
-        assert!(leaf_handles.len() == _nspawner);
-    });
-
-    tokio::spawn(async move {
-        for leaf_handle in leaf_handles.drain(..) {
-            root_handles.push(tokio::spawn(async move { spawn_tasks(leaf_handle) }));
-        }
-
-        for leaf_handle in root_handles.drain(..) {
-            let mut leaf_handle = leaf_handle.await.unwrap();
-
-            for leaf in leaf_handle.drain(..) {
-                leaf.await.unwrap();
-            }
-
-            leaf_handles.push(leaf_handle)
-        }
-
-        tx.send((root_handles, leaf_handles)).unwrap()
-    });
-}
-
-pub mod blocking {
+pub mod reference {
     use super::*;
 
-    fn _static_assert() {
-        let _: Fn = ch;
+    use futures::future;
+    use std::sync::Arc;
+
+    async fn task_type_1(nspawn: usize) {
+        let data = Arc::new(black_box(vec![1u8; 1_000_000]));
+        future::join_all(
+            (0..black_box(nspawn))
+                .map(|_| tokio_ref::spawn(black_box(task_type_2(Arc::clone(&data))))),
+        )
+        .await;
     }
 
-    // TODO duplication. but no call by refernce
-    pub fn ch(
-        _nspawner: usize,
-        _nspawn: usize,
-        tx: SyncSender<(RootHandles, LeafHandles)>,
-        mut root_handles: RootHandles,
-        mut leaf_handles: LeafHandles,
-    ) {
-        cfg_if!(if #[cfg(feature = "check")] {
-            assert!(root_handles.is_empty());
-            assert!(root_handles.capacity() == _nspawner);
-
-            assert!(leaf_handles.iter().all(|i| i.is_empty() && i.capacity() == _nspawn));
-            assert!(leaf_handles.len() == _nspawner);
-        });
-
-        for leaf_handle in leaf_handles.drain(..) {
-            root_handles.push(tokio::task::spawn_blocking(|| spawn_tasks(leaf_handle)));
+    async fn task_type_2(data: Arc<Vec<u8>>) {
+        for _ in 0..YIELD_BOUND {
+            tokio_groups::task::yield_now().await;
         }
+        drop(black_box(data));
+    }
 
-        tokio::spawn(async move {
-            for leaf_handle in root_handles.drain(..) {
-                let mut leaf_handle = leaf_handle.await.unwrap();
+    pub fn run(nspawner: usize, nspawn: usize, tx: SyncSender<()>) {
+        tokio_ref::spawn(async move {
+            future::join_all(
+                (0..black_box(nspawner)).map(|_| tokio_ref::spawn(black_box(task_type_1(nspawn)))),
+            )
+            .await;
 
-                for leaf in leaf_handle.drain(..) {
-                    leaf.await.unwrap();
-                }
+            tx.send(()).unwrap()
+        });
+    }
+}
 
-                leaf_handles.push(leaf_handle)
-            }
+pub mod sharded {
+    use super::*;
 
-            tx.send((root_handles, leaf_handles)).unwrap()
+    use futures::future;
+    use std::sync::Arc;
+
+    async fn task_type_1(nspawn: usize, group: Arc<tokio_groups::SpawnGroup>) {
+        let data = Arc::new(black_box(vec![1u8; 1_000_000]));
+        future::join_all(
+            (0..black_box(nspawn)).map(|_| group.spawn(black_box(task_type_2(Arc::clone(&data))))),
+        )
+        .await;
+    }
+
+    async fn task_type_2(data: Arc<Vec<u8>>) {
+        for _ in 0..YIELD_BOUND {
+            tokio_groups::task::yield_now().await;
+        }
+        drop(black_box(data));
+    }
+
+    pub fn run(nspawner: usize, nspawn: usize, tx: SyncSender<()>, group: usize) {
+        let current = Arc::new(tokio_groups::group(group));
+        let group = Arc::clone(&current);
+        current.spawn(async move {
+            let current = Arc::clone(&group);
+            future::join_all((0..black_box(nspawner)).map(|_| {
+                let group = Arc::clone(&group);
+                current.spawn(black_box(task_type_1(nspawn, group)))
+            }))
+            .await;
+
+            tx.send(()).unwrap()
+        });
+    }
+}
+
+pub mod fixed {
+    use super::*;
+
+    use futures::future;
+    use std::sync::Arc;
+    use tokio_fixed as tokio;
+
+    async fn task_type_1(nspawn: usize, group: usize) {
+        let data = Arc::new(black_box(vec![1u8; 1_000_000]));
+        future::join_all(
+            (0..black_box(nspawn))
+                .map(|_| tokio::spawn_into(group, black_box(task_type_2(Arc::clone(&data))))),
+        )
+        .await;
+    }
+
+    async fn task_type_2(data: Arc<Vec<u8>>) {
+        for _ in 0..YIELD_BOUND {
+            tokio_groups::task::yield_now().await;
+        }
+        drop(black_box(data));
+    }
+
+    pub fn run(nspawner: usize, nspawn: usize, tx: SyncSender<()>, group: usize) {
+        tokio::spawn_into(group, async move {
+            future::join_all(
+                (0..black_box(nspawner))
+                    .map(|_| tokio::spawn_into(group, black_box(task_type_1(nspawn, group)))),
+            )
+            .await;
+
+            tx.send(()).unwrap()
         });
     }
 }

@@ -1,11 +1,25 @@
-use std::time::Duration;
-use tokio::runtime::{self, Runtime};
-
-pub fn new(workers: usize, bloking: usize) -> Runtime {
-    runtime::Builder::new_multi_thread()
+pub fn new_ref(nworker: usize, bloking: usize) -> tokio_ref::runtime::Runtime {
+    tokio_ref::runtime::Builder::new_multi_thread()
         .max_blocking_threads(bloking)
-        .worker_threads(workers)
-        .thread_keep_alive(Duration::from_secs(10_000))
+        .worker_threads(nworker)
+        .build()
+        .unwrap()
+}
+
+pub fn new_shard(nworker: usize, ngroup: usize, nbloking: usize) -> tokio_groups::runtime::Runtime {
+    tokio_groups::runtime::Builder::new_multi_thread()
+        .max_blocking_threads(nbloking)
+        .worker_threads(nworker)
+        .worker_groups(ngroup)
+        .build()
+        .unwrap()
+}
+
+pub fn new_fixed(nworker: usize, ngroup: usize, nbloking: usize) -> tokio_fixed::runtime::Runtime {
+    tokio_fixed::runtime::Builder::new_multi_thread()
+        .max_blocking_threads(nbloking)
+        .worker_threads(nworker)
+        .worker_groups(ngroup)
         .build()
         .unwrap()
 }
