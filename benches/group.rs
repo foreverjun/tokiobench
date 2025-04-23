@@ -55,7 +55,7 @@ fn nworker() -> Vec<usize> {
 }
 
 fn nspawner() -> Vec<usize> {
-    vec![8, 16, 32, 48]
+    (1..=10).map(|n| n * 16).collect()
 }
 
 fn nruntime() -> Vec<usize> {
