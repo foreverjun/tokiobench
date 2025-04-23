@@ -32,6 +32,8 @@ def fetch() -> list[Frame]:
             benchmark_json = json.load(bpath_path.open())
 
             thrpt = (benchmark_json["throughput"]["Elements"] / estimates_json["median"]["point_estimate"]) * 10 ** 9
+            std_err = estimates_json["median"]["standard_error"]
+
             name = benchmark_json["function_id"]
 
             match = re.compile(r"nruntime\((\d+)\)/nworker\((\d+)\)/nspawner\((\d+)\)/nspawn\((\d+)\)").match(name)
@@ -40,7 +42,8 @@ def fetch() -> list[Frame]:
                 "nworker": int(match.group(2)),
                 "nspawner": int(match.group(3)),
                 "nspawn": int(match.group(4)),
-                "thrpt": thrpt,
+                "thrpt": int(thrpt),
+                "std_err": int(std_err),
                 "name": d.name
             })
 
@@ -62,13 +65,14 @@ def group_by(frames: list[Frame], key) -> FrameClasses:
 
 def plot_line(frames: list[Frame]):
     trhpts = list(map(lambda f: f["thrpt"], frames))
+    std_err = list(map(lambda f: f["std_err"], frames))
     nspawners = list(map(lambda f: f["nspawner"], frames))
 
-    plt.errorbar(nspawners, trhpts)
+    plt.errorbar(nspawners, trhpts, yerr=std_err)
 
 def plot(*, path: lpath.Path, frames: list[Frame]):
     plt.figure(figsize=(10, 10))
-    plt.title("Syntetic multi-runtime system througput. The highest value is better.")
+    # plt.title("Лучшее значние --- большее", fontsize="16")
 
     legend = []
 
@@ -83,10 +87,10 @@ def plot(*, path: lpath.Path, frames: list[Frame]):
             plot_line(sorted(frames, key=lambda f: f["nspawner"]))
             legend.append(f"{nruntime} runtime")
 
-        plt.legend(legend)
+        plt.legend(legend, loc="upper right", fontsize="16")
 
-        plt.xlabel("Number of spawners")
-        plt.ylabel("Throughput (task / s)")
+        plt.xlabel("Количество задач", fontsize="16")
+        plt.ylabel("Пропускная способность (задача / сек)", fontsize="16")
 
         plt.gca().ticklabel_format(axis='y', style='plain')
 
