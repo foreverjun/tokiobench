@@ -20,7 +20,7 @@ pub mod reference {
 
     async fn task_type_2(data: Arc<Vec<u8>>) {
         for _ in 0..YIELD_BOUND {
-            tokio_groups::task::yield_now().await;
+            tokio_ref::task::yield_now().await;
         }
         drop(black_box(data));
     }
@@ -67,42 +67,6 @@ pub mod sharded {
                 let group = Arc::clone(&group);
                 current.spawn(black_box(task_type_1(nspawn, group)))
             }))
-            .await;
-
-            tx.send(()).unwrap()
-        });
-    }
-}
-
-pub mod fixed {
-    use super::*;
-
-    use futures::future;
-    use std::sync::Arc;
-    use tokio_fixed as tokio;
-
-    async fn task_type_1(nspawn: usize, group: usize) {
-        let data = Arc::new(black_box(vec![1u8; 1_000_000]));
-        future::join_all(
-            (0..black_box(nspawn))
-                .map(|_| tokio::spawn_into(group, black_box(task_type_2(Arc::clone(&data))))),
-        )
-        .await;
-    }
-
-    async fn task_type_2(data: Arc<Vec<u8>>) {
-        for _ in 0..YIELD_BOUND {
-            tokio_groups::task::yield_now().await;
-        }
-        drop(black_box(data));
-    }
-
-    pub fn run(nspawner: usize, nspawn: usize, tx: SyncSender<()>, group: usize) {
-        tokio::spawn_into(group, async move {
-            future::join_all(
-                (0..black_box(nspawner))
-                    .map(|_| tokio::spawn_into(group, black_box(task_type_1(nspawn, group)))),
-            )
             .await;
 
             tx.send(()).unwrap()

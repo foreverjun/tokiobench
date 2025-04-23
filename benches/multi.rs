@@ -59,15 +59,15 @@ fn bench(
 }
 
 fn nworker() -> Vec<usize> {
-    vec![12]
+    vec![24]
 }
 
 fn nspawner() -> Vec<usize> {
-    vec![160]
+    vec![8, 16, 32, 48]
 }
 
 fn nruntime() -> Vec<usize> {
-    vec![1]
+    vec![1, 2, 4, 8]
 }
 
 macro_rules! benches {
