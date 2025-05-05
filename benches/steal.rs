@@ -117,4 +117,8 @@ criterion_group!(
     targets = line::origin
 );
 
-criterion_main!(benches);
+fn noop(_c: &mut Criterion) {
+}
+
+criterion_group!(empty_group, noop);
+criterion_main!(empty_group);

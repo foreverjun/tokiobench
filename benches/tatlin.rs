@@ -42,11 +42,11 @@ fn bench(
 }
 
 fn nworker() -> Vec<usize> {
-    vec![1, 2, 4, 8, 12]
+    vec![1, 4]
 }
 
 fn nspawner() -> Vec<usize> {
-    (1..=20).collect()
+    (2..=4).step_by(2).collect()
 }
 
 macro_rules! benches {
@@ -89,7 +89,7 @@ pub mod line {
     use super::*;
 
     fn nspawn() -> Vec<usize> {
-        vec![5000]
+        vec![3000, 10000]
     }
 
     benches! {"line"}
@@ -102,7 +102,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(100))
         .warm_up_time(Duration::from_secs(5));
 
-    targets = line::origin, line::cleaned
+    targets = line::cleaned
 );
 
 criterion_main!(benches);
