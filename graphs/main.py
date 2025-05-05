@@ -4,7 +4,7 @@ import argparse
 import params as p
 
 import bench
-import metrics
+import group
 
 def main():
     parser = argparse.ArgumentParser(
@@ -34,17 +34,10 @@ def main():
 
     lpath.Path(p.RESULT_PATH).mkdir(mode=0o777, parents=True, exist_ok=True)
 
-    if args.bscatter:
-        bench.nspawn_nspawner_scatter()
-        bench.nspawn_nspawner_nworker_scatters()
-
     if args.bline:
-        bench.nspawn_nspawner_nworker_line()
-
-    if args.mtotal:
-        metrics.run_sum_total()
-    if args.msampling:
-        metrics.run_sampling()
+        print("bline taken")
+        bench.run()
+        group.run()
 
 if __name__ == "__main__":
     main()
