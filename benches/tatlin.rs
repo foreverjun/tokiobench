@@ -42,11 +42,11 @@ fn bench(
 }
 
 fn nworker() -> Vec<usize> {
-    vec![1, 4]
+    vec![1, 4, 8, 16, 32, 48]
 }
 
 fn nspawner() -> Vec<usize> {
-    (2..=4).step_by(2).collect()
+    (2..=32).step_by(2).collect()
 }
 
 macro_rules! benches {
@@ -98,8 +98,8 @@ pub mod line {
 criterion_group!(
     name = benches;
     config = Criterion::default()
-        .sample_size(100)
-        .measurement_time(Duration::from_secs(100))
+        .sample_size(200)
+        .measurement_time(Duration::from_secs(80))
         .warm_up_time(Duration::from_secs(5));
 
     targets = line::cleaned

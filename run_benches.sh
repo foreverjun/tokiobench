@@ -1,5 +1,11 @@
 #!/bin/bash
 COMMITS=("d760b26666867f80552534433de004ddebbfeef7" "d32268acf3e33a42a202a0ebf18c3a20980d8936" "288679b0aaa0fd7c9a9210653837249eca148343")
+set -e
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "sudo -E env "PATH=\$PATH" ./run_benches.sh"
+    exit 1
+fi
 
 TOTAL_RUNS=${#COMMITS[@]}
 
@@ -15,14 +21,14 @@ for i in "${!COMMITS[@]}"; do
     echo "=========================================="
 
 	cd tokio
-    git checkout "$COMMIT" || { echo "Не удалось перейти на коммит $COMMIT"; exit 1; }
+    git checkout --force "$COMMIT" || { echo "Не удалось перейти на коммит $COMMIT"; exit 1; }
 	cd ..
 
     cargo clean
 
     START_TIME=$(date +%s)
-
-    sudo nice -n -20 cargo bench
+    
+    nice -n -20 cargo bench
 
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
@@ -31,7 +37,7 @@ for i in "${!COMMITS[@]}"; do
 
     COMMIT_SHORT=$(git rev-parse --short "$COMMIT")
     RESULT_ARCHIVE="$RESULTS_DIR/criterion_results_$COMMIT_SHORT.tar.gz"
-    tar -czf "$RESULT_ARCHIVE" -C target/criterion criterion
+    tar -czf "$RESULT_ARCHIVE" -C target criterion
 
     echo "Результаты сохранены в $RESULT_ARCHIVE"
 done
