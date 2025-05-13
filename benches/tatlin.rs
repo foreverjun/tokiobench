@@ -46,7 +46,7 @@ fn nworker() -> Vec<usize> {
 }
 
 fn nspawner() -> Vec<usize> {
-    (2..=32).step_by(2).collect()
+    (2..=38).step_by(2).collect()
 }
 
 macro_rules! benches {
