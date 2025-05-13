@@ -42,7 +42,7 @@ fn bench(
 }
 
 fn nworker() -> Vec<usize> {
-    vec![1, 4, 8, 16, 32, 48]
+    vec![ 4, 8, 16, 32, 48]
 }
 
 fn nspawner() -> Vec<usize> {
@@ -89,7 +89,7 @@ pub mod line {
     use super::*;
 
     fn nspawn() -> Vec<usize> {
-        vec![3000, 10000]
+        vec![3000]
     }
 
     benches! {"line"}
@@ -98,7 +98,7 @@ pub mod line {
 criterion_group!(
     name = benches;
     config = Criterion::default()
-        .sample_size(200)
+        .sample_size(40)
         .measurement_time(Duration::from_secs(80))
         .warm_up_time(Duration::from_secs(5));
 
