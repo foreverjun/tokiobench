@@ -89,7 +89,7 @@ pub mod line {
     use super::*;
 
     fn nspawn() -> Vec<usize> {
-        vec![3000]
+        vec![5000]
     }
 
     benches! {"line"}
