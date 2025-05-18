@@ -28,7 +28,7 @@ for i in "${!COMMITS[@]}"; do
 
     START_TIME=$(date +%s)
     
-    nice -n -20 cargo bench
+    nice -n -20 taskset -c 0-47 cargo bench
 
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
