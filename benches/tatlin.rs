@@ -42,7 +42,7 @@ fn bench(
 }
 
 fn nworker() -> Vec<usize> {
-    vec![ 4, 8, 16, 32, 48]
+    vec![ 2, 4, 8, 16, 32, 48]
 }
 
 fn nspawner() -> Vec<usize> {
