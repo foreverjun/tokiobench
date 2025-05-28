@@ -7,4 +7,5 @@ pub mod bench {
 }
 pub mod monitor {
     pub mod metrics;
+    pub mod watcher;
 }

@@ -18,6 +18,11 @@ serde_json = "1.0.134"
 name = "tokiobench"
 path = "src/lib.rs"
 
+[[bin]]
+name = "mtatlin"
+path = "src/monitor/mtatlin.rs"
+
+
 [[bench]]
 name = "tatlin"
 harness = false
