@@ -91,7 +91,7 @@ pub mod line {
     use super::*;
 
     pub(super) fn nspawn_origin() -> Vec<usize> {
-        vec![3000]
+        vec![1000]
     }
 
     pub(super) fn nspawn_cleaned() -> Vec<usize> {
