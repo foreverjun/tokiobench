@@ -108,7 +108,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(80))
         .warm_up_time(Duration::from_secs(5));
 
-    targets = line::cleaned, line::origin
+    targets = line::cleaned
 );
 
 criterion_main!(benches);
