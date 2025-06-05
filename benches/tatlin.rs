@@ -6,6 +6,8 @@ use std::time::Duration;
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use itertools::iproduct;
 use tokiobench::bench::tatlin;
+use crate::line::nspawn_origin;
+use crate::line::nspawn_cleaned;
 
 use tokiobench::rt;
 
@@ -55,7 +57,7 @@ macro_rules! benches {
             bench(
                 concat!($expression, "/origin"),
                 tatlin::origin::run,
-                &nspawn(),
+                &nspawn_origin(),
                 &nspawner(),
                 &nworker(),
                 c,
@@ -66,7 +68,7 @@ macro_rules! benches {
             bench(
                 concat!($expression, "/cleaned"),
                 tatlin::cleaned::run,
-                &nspawn(),
+                &nspawn_cleaned(),
                 &nspawner(),
                 &nworker(),
                 c,
@@ -88,8 +90,12 @@ pub mod scatter {
 pub mod line {
     use super::*;
 
-    fn nspawn() -> Vec<usize> {
+    pub(super) fn nspawn_origin() -> Vec<usize> {
         vec![3000]
+    }
+
+    pub(super) fn nspawn_cleaned() -> Vec<usize> {
+        vec![3000, 7000]
     }
 
     benches! {"line"}
@@ -102,7 +108,7 @@ criterion_group!(
         .measurement_time(Duration::from_secs(80))
         .warm_up_time(Duration::from_secs(5));
 
-    targets = line::cleaned
+    targets = line::cleaned, line::origin
 );
 
 criterion_main!(benches);

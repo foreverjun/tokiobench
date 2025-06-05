@@ -4,6 +4,7 @@ use futures::future;
 use std::hint::black_box;
 
 pub type Bench = fn(usize, usize, SyncSender<()>);
+const YIELD_BOUND: usize = 1000;
 
 pub mod cleaned {
     use super::*;
@@ -31,6 +32,7 @@ pub mod origin {
     use super::*;
 
     use futures::future;
+    use tokio::task;
     use std::sync::Arc;
 
     async fn task_type_1(nspawn: usize) {
@@ -42,6 +44,9 @@ pub mod origin {
     }
 
     async fn task_type_2(data: Arc<Vec<u8>>) {
+        for _ in 0..YIELD_BOUND {
+            task::yield_now().await;
+        }
         black_box(drop(black_box(data)));
     }
 
